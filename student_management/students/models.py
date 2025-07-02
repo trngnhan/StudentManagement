@@ -127,6 +127,7 @@ class Classroom(models.Model):
 # -------- HỌC SINH --------
 class StudentInfo(PersonalInfo):
     user = models.OneToOneField(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='student_info')
+    encoding = models.BinaryField(null=True)
 
     def get_current_classroom(self):
         latest = self.classroom_transfers.order_by('-transfer_date').first()

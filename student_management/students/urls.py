@@ -25,8 +25,6 @@ router.register(r'rules', RuleViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-]
-
-urlpatterns = [
-    path('', include(router.urls)),
+    path("attendance/camera/", camera_attendance, name="camera_attendance"),
+    path("attendance/mark/",  mark_attendance,  name="mark_attendance"),
 ]
