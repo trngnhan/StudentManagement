@@ -22,6 +22,9 @@ Bài tập lớn Lập trình cơ sở dữ liệu
 - **Thông tin cá nhân:** Họ tên, giới tính, ngày sinh, số điện thoại, email
 - **Cấu trúc trường:** Khối lớp, lớp học, môn học, chương trình học
 - **Phụ huynh:** Gắn với mỗi học sinh
+Liên hệ Email: 
+trinhquocdat041004@gmail.com
+
 
 ### 🧑‍🏫 Học tập & Điểm số
 
@@ -60,3 +63,9 @@ source venv/bin/activate  # hoặc venv\\Scripts\\activate trên Windows
 pip install -r requirements.txt
 python manage.py migrate
 python magage.py runserver
+
+
+### 1. Liên Hệ
+```bash
+Trần Trọng Nhân: kingtrngnhan@gmail.com
+Trịnh Quốc Đạt: trinhquocdat041004@gmail.com
