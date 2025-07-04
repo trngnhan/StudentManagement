@@ -1,4 +1,3 @@
-# seed_initial_data.py
 import os
 import django
 
@@ -8,8 +7,11 @@ django.setup()
 
 from students.models import (
     Subject, SchoolYear, Semester, Grade, Classroom, Curriculum,
-    GradeType, SemesterType
+    GradeType, SemesterType,
+    User, AdminInfo, TeacherInfo, StudentInfo, StaffInfo,
+    Gender, Role
 )
+from django.utils import timezone
 
 # --- Môn học ---
 subjects = ['Toán', 'Ngữ văn', 'Vật lý', 'Hóa học', 'Sinh học',
@@ -63,3 +65,77 @@ for grade in grade_objs:
         if created:
             count += 1
 print(f"✅ Curriculum created ({count} môn học được gán vào khối)")
+
+# ==========================
+# TẠO USER MẪU CHO CÁC ROLE
+# ==========================
+
+# --- Admin ---
+admin_user, _ = User.objects.get_or_create(username='admin01', defaults={'role': Role.ADMIN})
+admin_user.set_password('admin123')
+admin_user.save()
+AdminInfo.objects.get_or_create(
+    user=admin_user,
+    defaults={
+        'name': 'Admin Nguyễn',
+        'gender': Gender.MALE,
+        'birthday': timezone.datetime(1990, 1, 1),
+        'email': 'admin@example.com',
+        'phone': '0900000001',
+        'address': 'Hà Nội',
+        'status': True
+    }
+)
+
+# --- Giáo viên ---
+teacher_user, _ = User.objects.get_or_create(username='teacher01', defaults={'role': Role.TEACHER})
+teacher_user.set_password('teacher123')
+teacher_user.save()
+TeacherInfo.objects.get_or_create(
+    user=teacher_user,
+    defaults={
+        'name': 'Cô Mai Hoa',
+        'gender': Gender.FEMALE,
+        'birthday': timezone.datetime(1985, 3, 10),
+        'email': 'teacher@example.com',
+        'phone': '0900000002',
+        'address': 'TP.HCM',
+        'status': True
+    }
+)
+
+# --- Học sinh ---
+student_user, _ = User.objects.get_or_create(username='student01', defaults={'role': Role.STUDENT})
+student_user.set_password('student123')
+student_user.save()
+StudentInfo.objects.get_or_create(
+    user=student_user,
+    defaults={
+        'name': 'Trần Văn B',
+        'gender': Gender.MALE,
+        'birthday': timezone.datetime(2006, 9, 9),
+        'email': 'student@example.com',
+        'phone': '0900000003',
+        'address': 'Đồng Nai',
+        'status': True
+    }
+)
+
+# --- Nhân viên ---
+staff_user, _ = User.objects.get_or_create(username='staff01', defaults={'role': Role.STAFF})
+staff_user.set_password('staff123')
+staff_user.save()
+StaffInfo.objects.get_or_create(
+    user=staff_user,
+    defaults={
+        'name': 'Nguyễn Thị Lan',
+        'gender': Gender.FEMALE,
+        'birthday': timezone.datetime(1992, 5, 20),
+        'email': 'staff@example.com',
+        'phone': '0900000004',
+        'address': 'Cần Thơ',
+        'status': True
+    }
+)
+
+print("✅ Sample users created (Admin, Teacher, Student, Staff)")

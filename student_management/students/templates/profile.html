@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base_effects.css' %}">
+{% endblock %}
+
+{% block title %}Hồ sơ cá nhân{% endblock %}
+{% block header %}👤 Hồ sơ cá nhân{% endblock %}
+
+{% block content %}
+{% if profile %}
+<div class="profile-card">
+  <div class="profile-title">Thông tin người dùng</div>
+  <ul class="list-group list-group-flush">
+    <li class="list-group-item"><strong>Họ tên:</strong> {{ profile.name }}</li>
+    <li class="list-group-item"><strong>Giới tính:</strong> {{ profile.get_gender_display }}</li>
+    <li class="list-group-item"><strong>Ngày sinh:</strong> {{ profile.birthday }}</li>
+    <li class="list-group-item"><strong>Email:</strong> {{ profile.email }}</li>
+    <li class="list-group-item"><strong>SĐT:</strong> {{ profile.phone }}</li>
+    <li class="list-group-item"><strong>Địa chỉ:</strong> {{ profile.address }}</li>
+    <li class="list-group-item"><strong>Vai trò:</strong> {{ role|capfirst }}</li>
+  </ul>
+</div>
+{% else %}
+<div class="alert alert-danger text-center mt-5">
+  Không tìm thấy thông tin hồ sơ người dùng.
+</div>
+{% endif %}
+{% endblock %}
