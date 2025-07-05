@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Quản lý học sinh{% endblock %}
+
+{% block link %}
+<link rel="stylesheet" href="{% static 'css/student.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<form action="@{/admin/teachers}" method="get" class="mb-4">
+    <div class="input-group">
+        <input type="text" class="form-control" name="username" placeholder="🔍 Tìm theo mã sinh viên">
+        <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i> Tìm</button>
+    </div>
+</form>
+<div class="border-radious ">
+    <table class="table  table-container table-striped">
+        <thead class="table-info">
+            <tr>
+                <th>Mã HS</th>
+                <th>Họ và Tên</th>
+                <th>Lớp</th>
+                <th>Ngày sinh</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>HS001</td>
+                <td>Nguyễn Văn A</td>
+                <td>10A1</td>
+                <td>2008-03-12</td>
+                <td>
+                    <button class="btn btn-primary btn-sm" onclick="openForm('edit', this)">Sửa</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteStudent(this)">Xoá</button>
+                </td>
+            </tr>
+            <tr>
+                <td>HS002</td>
+                <td>Trần Thị B</td>
+                <td>10A2</td>
+                <td>2008-08-25</td>
+                <td>
+                    <button class="btn btn-primary btn-sm" onclick="openForm('edit', this)">Sửa</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteStudent(this)">Xoá</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- MODAL FORM -->
+<div class="modal fade" id="studentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Thêm học sinh</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="studentForm">
+                    <div class="mb-3">
+                        <label class="form-label">Mã HS</label>
+                        <input type="text" class="form-control" id="idField" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Họ và Tên</label>
+                        <input type="text" class="form-control" id="nameField" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Lớp</label>
+                        <input type="text" class="form-control" id="classField" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ngày sinh</label>
+                        <input type="date" class="form-control" id="dobField" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">Lưu</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const modal = new bootstrap.Modal(document.getElementById('studentModal'));
+    let editingRow = null;
+
+    function openForm(mode, button = null) {
+        const title = document.getElementById("modalTitle");
+        const form = document.getElementById("studentForm");
+
+        if (mode === 'edit' && button) {
+            editingRow = button.closest('tr');
+            const cells = editingRow.querySelectorAll('td');
+            document.getElementById('idField').value = cells[0].innerText;
+            document.getElementById('nameField').value = cells[1].innerText;
+            document.getElementById('classField').value = cells[2].innerText;
+            document.getElementById('dobField').value = cells[3].innerText;
+            title.innerText = "Chỉnh sửa học sinh";
+        } else {
+            editingRow = null;
+            form.reset();
+            title.innerText = "Thêm học sinh";
+        }
+
+        modal.show();
+    }
+
+    document.getElementById('studentForm').onsubmit = function (e) {
+        e.preventDefault();
+
+        const id = document.getElementById('idField').value;
+        const name = document.getElementById('nameField').value;
+        const cls = document.getElementById('classField').value;
+        const dob = document.getElementById('dobField').value;
+
+        if (editingRow) {
+            const cells = editingRow.querySelectorAll('td');
+            cells[0].innerText = id;
+            cells[1].innerText = name;
+            cells[2].innerText = cls;
+            cells[3].innerText = dob;
+        } else {
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+          <td>${id}</td>
+          <td>${name}</td>
+          <td>${cls}</td>
+          <td>${dob}</td>
+          <td>
+            <button class="btn btn-primary btn-sm" onclick="openForm('edit', this)">Sửa</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteStudent(this)">Xoá</button>
+          </td>
+        `;
+            document.getElementById('studentTable').appendChild(newRow);
+        }
+
+        modal.hide();
+    }
+
+    function deleteStudent(button) {
+        if (confirm("Bạn có chắc muốn xoá học sinh này?")) {
+            const row = button.closest('tr');
+            row.remove();
+        }
+    }
+</script>
+{% endblock %}
+</body>
+
+</html>

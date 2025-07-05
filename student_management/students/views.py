@@ -108,6 +108,10 @@ class RuleViewSet(viewsets.ModelViewSet):
 def camera_attendance(request):
     return render(request, "attendance/camera_attendance.html")
 
+
+def students(request):
+    return render(request, "teacher/student.html")
+
 @csrf_exempt
 def mark_attendance(request):
     if request.method != "POST":
@@ -136,7 +140,7 @@ def mark_attendance(request):
         for s in students:
             known = pickle.loads(s.encoding)
             dist = face_recognition.face_distance([known], enc)[0]
-            if dist < 0.5:                        # ngưỡng so khớp
+            if dist < 0.5:
                 candidates.append((dist, s))
         if not candidates:
             return JsonResponse({"status": "unknown"})

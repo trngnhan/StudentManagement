@@ -27,4 +27,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path("attendance/camera/", camera_attendance, name="camera_attendance"),
     path("attendance/mark/",  mark_attendance,  name="mark_attendance"),
+    path("teacher/student/", students, name="student")
 ]

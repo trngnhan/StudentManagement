@@ -1,57 +1,74 @@
+
+{% extends "base.html" %}
 {% load static %}
-<html lang="vi">
-<head>
-  <meta charset="UTF-8" />
-  <title>Điểm danh bằng gương mặt</title>
-  <style>
-    video { width: 400px; border: 2px solid #4caf50; border-radius: 8px; }
-    .log { margin-top: 12px; font-size: 1.1rem; }
-    button { padding: 6px 14px; }
-  </style>
-</head>
-<body>
-  <h2>Điểm danh</h2>
-  <video id="video" autoplay playsinline></video><br />
-  <button id="capture">Chấm công</button>
-  <div class="log" id="log"></div>
+{% block title %}Điểm danh bằng gương mặt{% endblock %}
+
+{% block link %}
+<link rel="stylesheet" href="{% static 'css/attendance.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h2>Điểm danh bằng gương mặt</h2>
+  <div class="card">
+    <video id="video" autoplay playsinline></video><br />
+    <button id="capture">Điểm danh</button>
+    <div class="log" id="log"></div>
+  </div>
 
   <script>
     const video = document.getElementById("video");
     const log   = document.getElementById("log");
 
-    // xin quyền camera
+    // Xin quyền camera
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => (video.srcObject = stream))
-      .catch(err   => (log.innerText = "Không mở được camera: " + err));
+      .catch(err   => {
+        log.innerText = "Không mở được camera: " + err;
+        log.classList.add("error");
+      });
 
-    // chụp frame & gửi server
+    // Chụp frame & gửi server
     document.getElementById("capture").onclick = async () => {
       log.innerText = "Đang nhận diện...";
+      log.classList.remove("error");
+
       const canvas  = document.createElement("canvas");
       canvas.width  = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext("2d").drawImage(video, 0, 0);
       const dataURL = canvas.toDataURL("image/jpeg");
 
-      const res = await fetch("{% url 'mark_attendance' %}", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: dataURL }),
-      });
-      const data = await res.json();
+      try {
+        const res  = await fetch("{% url 'mark_attendance' %}", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: dataURL }),
+        });
+        const data = await res.json();
 
-      if (data.status === "ok") {
-        log.innerText =
-          (data.already ? "✅ Đã điểm danh: " : "🎉 Điểm danh thành công: ") +
-          data.student;
-      } else if (data.status === "unknown") {
-        log.innerText = "❓ Không nhận diện được học sinh.";
-      } else if (data.status === "no_face") {
-        log.innerText = "🙈 Không thấy khuôn mặt.";
-      } else {
-        log.innerText = "⚠️ Lỗi: " + (data.detail || data.status);
+        if (data.status === "ok") {
+          log.innerText =
+            (data.already ? "Đã điểm danh: " : "Điểm danh thành công: ") +
+            data.student;
+        } else if (data.status === "unknown") {
+          log.innerText = "Không nhận diện được học sinh.";
+          log.classList.add("error");
+        } else if (data.status === "no_face") {
+          log.innerText = "Không thấy khuôn mặt.";
+          log.classList.add("error");
+        } else if (data.status === "multi_face") {
+          log.innerText = `Phát hiện ${data.faces} khuôn mặt. Hãy chỉ để một người trước camera.`;
+          log.classList.add("error");
+        } else {
+          log.innerText = "Lỗi: " + (data.detail || data.status);
+          log.classList.add("error");
+        }
+      } catch (err) {
+        log.innerText = "Lỗi kết nối: " + err;
+        log.classList.add("error");
       }
     };
   </script>
+{% endblock %}
 </body>
 </html>
