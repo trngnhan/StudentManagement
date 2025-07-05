@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}Quản lý học sinh{% endblock %}
 
-{% block link %}
+{% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/student.css' %}">
 {% endblock %}
 
@@ -14,6 +14,57 @@
         <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i> Tìm</button>
     </div>
 </form>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between">
+        <div class="">
+            <h3 class="mb-3 text-primary fw-bold">Danh sách học sinh</h3>
+        </div>
+        <div>
+            <a href="{% url 'student_create' %}" class="btn btn-success mb-3">➕ Thêm học sinh</a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover table-bordered align-middle text-center shadow-sm border">
+            <thead class="table-info">
+                <tr>
+                    <th>Họ tên</th>
+                    <th>Ngày sinh</th>
+                    <th>Giới tính</th>
+                    <th>Địa chỉ</th>
+                    <th>Email</th>
+                    <th>SĐT</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in students %}
+                <tr>
+                    <td>{{ s.name }}</td>
+                    <td>{{ s.birthday|date:"d/m/Y" }}</td>
+                    <td>{% if s.gender == 1 %}Nam{% else %}Nữ{% endif %}</td>
+                    <td>{{ s.address }}</td>
+                    <td>{{ s.email }}</td>
+                    <td>{{ s.phone }}</td>
+                    <td>
+                        <a href="{% url 'student_update' s.id %}" class="btn btn-sm btn-outline-primary me-1">✏️ Sửa</a>
+                        <a href="{% url 'student_delete' s.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xác nhận xoá học sinh này?')">🗑️ Xoá</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-muted">Không có học sinh nào.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+
+<!-- 
 <div class="border-radious ">
     <table class="table  table-container table-striped">
         <thead class="table-info">
@@ -48,10 +99,10 @@
             </tr>
         </tbody>
     </table>
-</div>
+</div> -->
 
 <!-- MODAL FORM -->
-<div class="modal fade" id="studentModal" tabindex="-1" aria-hidden="true">
+<!-- <div class="modal fade" id="studentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -146,7 +197,7 @@
             row.remove();
         }
     }
-</script>
+</script> -->
 {% endblock %}
 </body>
 

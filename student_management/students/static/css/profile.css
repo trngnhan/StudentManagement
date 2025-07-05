@@ -1,0 +1,46 @@
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(-45deg, rgba(255, 220, 0, 0.6), #f1e8b7, #f7971e, #ffffff);
+  background-size: 400% 400%;
+  animation: gradientMove 15s ease infinite;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.profile-card {
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  padding: 30px;
+  max-width: 600px;
+  margin: 60px auto;
+}
+
+.profile-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #1e3c72;
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.list-group-item {
+  font-size: 1rem;
+  border: none;
+  padding: 12px 0;
+  background-color: transparent;
+}
+
+.list-group-item strong {
+  display: inline-block;
+  width: 120px;
+  color: #2a2a2a;
+}

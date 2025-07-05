@@ -1,0 +1,30 @@
+.table thead {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+.form-label {
+  font-weight: 500;
+}
+
+.tab-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+h3, h4 {
+  color: #2a2a2a;
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.tab-pane {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

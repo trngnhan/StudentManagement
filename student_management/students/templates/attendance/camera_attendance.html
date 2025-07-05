@@ -3,12 +3,12 @@
 {% load static %}
 {% block title %}Điểm danh bằng gương mặt{% endblock %}
 
-{% block link %}
+{% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/attendance.css' %}">
 {% endblock %}
+{% block header %}Điểm danh bằng gương mặt{% endblock %}
 
 {% block content %}
-  <h2>Điểm danh bằng gương mặt</h2>
   <div class="card">
     <video id="video" autoplay playsinline></video><br />
     <button id="capture">Điểm danh</button>

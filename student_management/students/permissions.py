@@ -3,7 +3,7 @@ from .models import Role
 
 class IsAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == Role.ADMIN
+        return request.user.is_authenticated and hasattr(request.user, 'admin_info')
 
 class IsStaff(permissions.BasePermission):
     def has_permission(self, request, view):

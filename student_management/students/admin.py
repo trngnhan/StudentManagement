@@ -24,7 +24,7 @@ class SchoolAdminSite(admin.AdminSite):
     index_title = "Bảng điều khiển"
 
 
-admin_site = SchoolAdminSite(name="school_admin")
+admin_site = SchoolAdminSite(name="admin")
 
 
 def enroll(tolerance: float = 0.6, frames_per_pose: int = 5):
@@ -125,6 +125,15 @@ class UserAdmin(admin.ModelAdmin):
         if obj.avatar:
             return format_html('<img src="{}" width="40" height="40" style="border-radius:50%;object-fit:cover;"/>', obj.avatar.url)
         return "-"
+    
+    def save_model(self, request, obj, form, change):
+        raw_pwd = form.cleaned_data["password"]
+        if change:
+            if "password" in form.changed_data:
+                obj.set_password(raw_pwd)
+        else:
+            obj.set_password(raw_pwd)
+        super().save_model(request, obj, form, change)
 
     avatar_preview.short_description = "Avatar"
     avatar_preview.admin_order_field = "avatar"
