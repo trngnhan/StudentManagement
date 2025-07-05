@@ -4,48 +4,104 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Quản lý học sinh{% endblock %}</title>
-
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons (nếu cần icon logout/avatar...) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     {% block extra_css %}{% endblock %}
 </head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">🎓 Quản lý Học sinh</a>
+<body class="d-flex flex-column min-vh-100">
+    <header fragment="header" class="w-100">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">🎓 Quản lý Học sinh</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        {# ------ DASHBOARD ------ #}
+                        {% url 'admin_dashboard' as dashboard_url %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == dashboard_url %}active{% endif %}"
+                                href="{{ dashboard_url }}">
+                                Dashboard
+                            </a>
+                        </li>
 
-            <!-- Avatar Dropdown -->
-            {% if request.session.username %}
-            <div class="dropdown ms-auto">
-                <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
-                    <img src="https://ui-avatars.com/api/?name={{ request.session.username }}&background=0D8ABC&color=fff"
-                         alt="avatar" width="32" height="32" class="rounded-circle me-2">
-                    <strong>{{ request.session.username }}</strong>
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="{% url 'profile' %}">👤 Hồ sơ cá nhân</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">🚪 Đăng xuất</a></li>
-                </ul>
+                        {# ------ QUẢN LÝ HỌC SINH ------ #}
+                        {% url 'admin_students' as students_url %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == students_url %}active{% endif %}"
+                                href="{{ students_url }}">
+                                Quản lý học sinh
+                            </a>
+                        </li>
+
+                        {# ------ QUẢN LÝ LỚP HỌC ------ #}
+                        {% url 'admin_classes' as classes_url %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == classes_url %}active{% endif %}"
+                                href="{{ classes_url }}">
+                                Quản lý lớp học
+                            </a>
+                        </li>
+
+                        {# ------ QUẢN LÝ ĐIỂM DANH ------ #}
+                        {% url 'admin_attendance' as attendance_url %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == attendance_url %}active{% endif %}"
+                                href="{{ attendance_url }}">
+                                Quản lý điểm danh
+                            </a>
+                        </li>
+
+                        {# ------ THỐNG KÊ ------ #}
+                        {% url 'admin_statistics' as stats_url %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == stats_url %}active{% endif %}"
+                                href="{{ stats_url }}">
+                                Thống kê
+                            </a>
+                        </li>
+                    </ul>
+
+                    {% if request.session.username %}
+                    <div class="dropdown ms-auto">
+                        <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                            <img src="https://ui-avatars.com/api/?name={{ request.session.username }}&background=0D8ABC&color=fff"
+                                alt="avatar" width="32" height="32" class="rounded-circle me-2">
+                            <strong>{{ request.session.username }}</strong>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'profile' %}">👤 Hồ sơ cá nhân</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">🚪 Đăng xuất</a></li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            {% endif %}
-        </div>
-    </nav>
+        </nav>
+    </header>
 
     <!-- Nội dung -->
-    <div class="container mt-4">
-        <div class="mb-4">
-            <h2 class="text-center fw-bold">{% block header %}Hệ thống Quản lý Học sinh{% endblock %}</h2>
+    <main class="flex-grow-1">
+        <div class="container mt-4">
+            <div class="mb-4">
+                <h2 class="text-center fw-bold">{% block header %}Hệ thống Quản lý Học sinh{% endblock %}</h2>
+            </div>
+
+            {% block content %}{% endblock %}
         </div>
-
-        {% block content %}{% endblock %}
-    </div>
-
-    <!-- JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </main>
+    
+    <!-- Footer -->
+    <footer fragment="footer" class="mt-auto bg-secondary bg-gradient text-white text-center py-3">
+        <p class="mb-0">&copy; 2025 - Hệ thống Quản lý học sinh | Giảng Viên</p>
+    </footer>
 </body>
 </html>

@@ -40,4 +40,8 @@ urlpatterns = [
     path('admin_dashboard/', admin_dashboard, name='admin_dashboard'),
     path("attendance/camera/", camera_attendance, name="camera_attendance"),
     path("attendance/mark/",  mark_attendance,  name="mark_attendance"),
+    path("student_list/", student_list, name="student_list"),
+    path("student/create/", student_create, name="student_create"),
+    path("student/<int:pk>/edit/", student_update, name="student_update"),
+    path("student/<int:pk>/delete/", student_delete, name="student_delete"),
 ]
