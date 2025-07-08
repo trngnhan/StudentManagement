@@ -24,7 +24,7 @@ import json, base64
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 import requests
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from django.conf import settings
 from rest_framework import serializers
@@ -53,13 +53,33 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=["get"], url_path="me")
+    def me(self, request):
+        user = request.user
+
+        if hasattr(user, "admin_info"):
+            role = "admin"
+        elif hasattr(user, "teacher_info"):
+            role = "teacher"
+        elif hasattr(user, "student_info"):
+            role = "student"
+        else:
+            role = "unknown"
+
+        return Response({
+            "username": user.username,
+            "role": role
+        })
 
 
 class AdminInfoViewSet(viewsets.ModelViewSet):
     queryset = AdminInfo.objects.all()
     serializer_class = AdminInfoSerializer
-    permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['get'], url_path='dashboard')
     def dashboard(self, request):
@@ -99,6 +119,8 @@ class ParentInfoViewSet(viewsets.ModelViewSet):
 class SchoolYearViewSet(viewsets.ModelViewSet):
     queryset = SchoolYear.objects.all()
     serializer_class = SchoolYearSerializer
+    authentication_classes = [JWTAuthentication]
+    permissions_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['get'], url_path='with-semesters')
     def with_semesters(self, request):
@@ -122,6 +144,8 @@ class SchoolYearViewSet(viewsets.ModelViewSet):
 class SemesterViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
     queryset = Semester.objects.all()
     serializer_class = SemesterSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     search_fields = ['school_year__id']
 
@@ -196,6 +220,8 @@ class ClassroomTransferViewSet(viewsets.ModelViewSet):
 class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.all().order_by("id")
     serializer_class = SubjectSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['get'], url_path='search', url_name='subject-search')
     def search(self, request):
@@ -207,6 +233,8 @@ class SubjectViewSet(viewsets.ModelViewSet):
 class CurriculumViewSet(viewsets.ModelViewSet):
     queryset = Curriculum.objects.select_related('grade', 'subject').all()
     serializer_class = CurriculumSerializer
+    authentication_classes = [JWTAuthentication]
+    permissions_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['post'], url_path='add')
     def add_to_curriculum(self, request):
@@ -252,6 +280,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 class RuleViewSet(viewsets.GenericViewSet):
     queryset = Rule.objects.all()
     serializer_class = RuleSerializer
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsAdmin]
 
     @action(detail=False, methods=['get'], url_path='all_rules')
@@ -290,16 +319,21 @@ def admin_dashboard(request):
 
 #------Khai báo các trang web---------
 def rules_list_view(request):
-    if not request.session.get("access"):
-        return redirect('login')
-    return render(request, 'admin/rules_list.html')
-
-
+    context = {
+        "access_token": request.session.get("access"),
+    }
+    return render(request, 'admin/rules_list.html', context)
 
 def subject_manage_view(request):
-    if not request.session.get("access"):
-        return redirect('login')
-    return render(request, 'admin/subject_manage.html')
+    print("access =", request.session.get("access"))
+    print("user =", request.user)
+    print("authenticated =", request.user.is_authenticated)
+
+    context = {
+        "access_token": request.session.get("access"),
+    }
+
+    return render(request, 'admin/subject_manage.html', context)
 
 def camera_attendance(request):
     return render(request, "attendance/camera_attendance.html")
@@ -452,7 +486,11 @@ def edit_subject_view(request, subject_id):
 def schoolyear_semester_manage_view(request):
     if not request.session.get("access"):
         return redirect('login')
-    return render(request, "admin/schoolyear_manage.html")
+
+    context = {
+        "access_token": request.session.get("access"),
+    }
+    return render(request, "admin/schoolyear_manage.html", context)
 
 def semesters_of_schoolyear_view(request, year_id):
     if not request.session.get("access"):
@@ -464,9 +502,8 @@ def semesters_of_schoolyear_view(request, year_id):
     return render(request, "admin/schoolyear_semesters.html", {
         "school_year": school_year,
         "semesters": semesters,
+        "access_token": request.session.get("access"),
     })
-    results = [{"id": s.id, "name": s.subject_name} for s in subjects]
-    return JsonResponse({"results": results})
 
 
 @login_required

@@ -32,30 +32,37 @@
 </div>
 
 <script>
-  const token = "{{ request.session.access|default:'' }}";
-  console.log("🚀 Sending token to API:", token);
+  async function ensureToken() {
+    let token = "{{ access_token|default:'' }}";
+    sessionStorage.setItem("access", token);
 
-  fetch('/admin-info/dashboard/', {
+    if (!token) {
+      const serverToken = "{{ request.session.access|default:'' }}";
+      if (serverToken) {
+        sessionStorage.setItem("access", serverToken);
+        token = serverToken;
+        console.log("Lấy token từ session server.");
+      }
+    }
+
+    if (!token) {
+      alert("Chưa có token, vui lòng đăng nhập.");
+      return window.location.href = "/login/";
+    }
+
+    return token;
+  }
+
+  // Gọi thử:
+  ensureToken().then(token => {
+    fetch("/users/me/", {
       headers: {
-          'Authorization': 'Bearer ' + token
+        "Authorization": `Bearer ${token}`
       }
-  })
-  .then(async res => {
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-          const text = await res.text();
-          console.warn("⚠️ Phản hồi không phải JSON:", text);
-          throw new Error("API trả về không phải JSON (có thể là lỗi hoặc chưa đăng nhập)");
-      }
-      return res.json();
-  })
-  .then(data => {
-      document.getElementById("staff-count").innerText = data.total_staff;
-      document.getElementById("teacher-count").innerText = data.total_teacher;
-      document.getElementById("student-count").innerText = data.total_student;
-      document.getElementById("classroom-count").innerText = data.total_classroom;
-      document.getElementById("subject-count").innerText = data.total_subject;
-  })
-  .catch(err => alert("❌ " + err.message));
+    })
+    .then(res => res.json())
+    .then(data => console.log("Thông tin người dùng:", data))
+    .catch(err => console.error("Không lấy được /users/me/:", err));
+  });
 </script>
 {% endblock %}

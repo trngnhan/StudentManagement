@@ -30,12 +30,27 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const rulesContainer = document.getElementById('rulesContainer');
     const ruleForm = document.getElementById('ruleForm');
 
+    let token = sessionStorage.getItem("access");
+    if (!token) {
+        const serverToken = "{{ request.session.access|default:'' }}";
+        if (serverToken) {
+            sessionStorage.setItem("access", serverToken);
+            token = serverToken;
+        }
+    }
+    if (!token) {
+        alert("Bạn chưa đăng nhập hoặc token đã hết. Vui lòng đăng nhập lại.");
+        return window.location.href = "/login/";
+    }
+
     fetch('/rules/all_rules/', {
-        credentials: 'include'
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
     })
     .then(res => {
         if (!res.ok) throw new Error('Không thể tải danh sách');
@@ -92,9 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
+                'Authorization': 'Bearer ' + token,
+                'X-CSRFToken': '{{ csrf_token }}'  // dùng nếu CSRF bật
             },
-            credentials: 'include',
             body: JSON.stringify(payload)
         })
         .then(res => {
