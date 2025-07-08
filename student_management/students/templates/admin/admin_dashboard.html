@@ -34,35 +34,46 @@
 <script>
   async function ensureToken() {
     let token = "{{ access_token|default:'' }}";
-    sessionStorage.setItem("access", token);
+    if (token) sessionStorage.setItem("access", token);
 
     if (!token) {
       const serverToken = "{{ request.session.access|default:'' }}";
       if (serverToken) {
         sessionStorage.setItem("access", serverToken);
         token = serverToken;
-        console.log("Lấy token từ session server.");
+        console.log("Lấy token từ session.");
       }
     }
 
     if (!token) {
-      alert("Chưa có token, vui lòng đăng nhập.");
-      return window.location.href = "/login/";
+      alert("Vui lòng đăng nhập lại.");
+      window.location.href = "/login/";
     }
 
     return token;
   }
 
-  // Gọi thử:
   ensureToken().then(token => {
-    fetch("/users/me/", {
+    fetch("/admin-info/dashboard/", {
       headers: {
         "Authorization": `Bearer ${token}`
       }
     })
-    .then(res => res.json())
-    .then(data => console.log("Thông tin người dùng:", data))
-    .catch(err => console.error("Không lấy được /users/me/:", err));
+    .then(res => {
+      if (!res.ok) throw new Error("Không thể tải dữ liệu dashboard");
+      return res.json();
+    })
+    .then(data => {
+      document.getElementById("staff-count").innerText = data.total_staff;
+      document.getElementById("teacher-count").innerText = data.total_teacher;
+      document.getElementById("student-count").innerText = data.total_student;
+      document.getElementById("classroom-count").innerText = data.total_classroom;
+      document.getElementById("subject-count").innerText = data.total_subject;
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Không thể tải dữ liệu bảng điều khiển");
+    });
   });
 </script>
 {% endblock %}

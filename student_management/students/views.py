@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import RestrictedError
 from django.views.decorators.http import require_GET
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, generics, status
@@ -83,16 +84,14 @@ class AdminInfoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='dashboard')
     def dashboard(self, request):
-        if not hasattr(request.user, 'admin_info'):
-            return Response({"detail": "Không có quyền truy cập"}, status=403)
-
-        return Response({
+        data = {
             "total_staff": StaffInfo.objects.count(),
             "total_teacher": TeacherInfo.objects.count(),
             "total_student": StudentInfo.objects.count(),
             "total_classroom": Classroom.objects.count(),
             "total_subject": Subject.objects.count(),
-        })
+        }
+        return Response(data)
 
 
 class StaffInfoViewSet(viewsets.ModelViewSet):
@@ -120,7 +119,7 @@ class SchoolYearViewSet(viewsets.ModelViewSet):
     queryset = SchoolYear.objects.all()
     serializer_class = SchoolYearSerializer
     authentication_classes = [JWTAuthentication]
-    permissions_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['get'], url_path='with-semesters')
     def with_semesters(self, request):
@@ -128,26 +127,24 @@ class SchoolYearViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=["delete"], url_path="delete")
+    @action(detail=True, methods=["delete"], url_path="", url_name="delete")
     def delete_schoolyear(self, request, pk=None):
         try:
             school_year = self.get_object()
             school_year.delete()
             return Response({"message": "Đã xoá năm học."}, status=status.HTTP_204_NO_CONTENT)
-        except models.ProtectedError:
+        except RestrictedError:
             return Response(
-                {"detail": "Không thể xoá năm học vì có học kỳ liên kết."},
+                {"detail": "Không thể xoá năm học vì còn học kỳ liên kết. Vui lòng xoá học kỳ trước."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
 
-class SemesterViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
+class SemesterViewSet(viewsets.ModelViewSet):
     queryset = Semester.objects.all()
     serializer_class = SemesterSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend]
-    search_fields = ['school_year__id']
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -171,7 +168,8 @@ class SemesterViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
             school_year_id=school_year_id,
             semester_type=semester_type
         )
-        return Response(SemesterSerializer(semester).data, status=201)
+        serializer = self.get_serializer(semester)
+        return Response(serializer.data, status=201)
 
     @action(detail=True, methods=['put'], url_path='update')
     def update_semester(self, request, pk=None):
@@ -234,7 +232,7 @@ class CurriculumViewSet(viewsets.ModelViewSet):
     queryset = Curriculum.objects.select_related('grade', 'subject').all()
     serializer_class = CurriculumSerializer
     authentication_classes = [JWTAuthentication]
-    permissions_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['post'], url_path='add')
     def add_to_curriculum(self, request):
