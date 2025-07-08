@@ -7,6 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from students.form import StudentForm, ParentForm
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from .models import *
@@ -286,7 +288,6 @@ def admin_dashboard(request):
         "username": request.session.get("username"),
     })
 
-
 #------Khai báo các trang web---------
 def rules_list_view(request):
     if not request.session.get("access"):
@@ -302,6 +303,13 @@ def subject_manage_view(request):
 
 def camera_attendance(request):
     return render(request, "attendance/camera_attendance.html")
+
+
+def students(request):
+    if not request.session.get('access'):
+        return redirect('login')
+    
+    return render(request, "teacher/student.html")
 
 @csrf_exempt
 def mark_attendance(request):
@@ -331,7 +339,7 @@ def mark_attendance(request):
         for s in students:
             known = pickle.loads(s.encoding)
             dist = face_recognition.face_distance([known], enc)[0]
-            if dist < 0.5:                        # ngưỡng so khớp
+            if dist < 0.5:
                 candidates.append((dist, s))
         if not candidates:
             return JsonResponse({"status": "unknown"})
@@ -446,7 +454,6 @@ def schoolyear_semester_manage_view(request):
         return redirect('login')
     return render(request, "admin/schoolyear_manage.html")
 
-
 def semesters_of_schoolyear_view(request, year_id):
     if not request.session.get("access"):
         return redirect("login")
@@ -458,3 +465,65 @@ def semesters_of_schoolyear_view(request, year_id):
         "school_year": school_year,
         "semesters": semesters,
     })
+    results = [{"id": s.id, "name": s.subject_name} for s in subjects]
+    return JsonResponse({"results": results})
+
+
+@login_required
+def student_create(request):
+    if request.method == "POST":
+        s_form = StudentForm(request.POST, request.FILES)
+        p_form = ParentForm(request.POST)
+        if s_form.is_valid() and p_form.is_valid():
+            student = s_form.save()           
+            parent  = p_form.save(commit=False)
+            parent.student = student       
+            parent.save()   
+            messages.success(request, "Đã tạo Học sinh thành công!")
+            return redirect("student_list")
+    else:
+        s_form = StudentForm()
+        p_form = ParentForm()
+
+    return render(request, "students/student_form.html",
+                  {"s_form": s_form, "p_form": p_form})
+
+
+def student_list(request):
+    students = StudentInfo.objects.all()
+    print(students)
+    return render(request, "students/student_list.html", {"students": students})
+
+# Thêm mới học sinh
+def student_create(request):
+    if request.method == "POST":
+        form = StudentForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Đã thêm học sinh thành công.")
+            return redirect("student_list")
+    else:
+        form = StudentForm()
+    return render(request, "students/student_form.html", {"form": form})
+
+# Sửa học sinh
+def student_update(request, pk):
+    student = get_object_or_404(StudentInfo, pk=pk)
+    if request.method == "POST":
+        form = StudentForm(request.POST, instance=student)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Đã cập nhật học sinh.")
+            return redirect("student_list")
+    else:
+        form = StudentForm(instance=student)
+    return render(request, "students/student_form.html", {"form": form})
+
+# Xoá học sinh
+def student_delete(request, pk):
+    student = get_object_or_404(StudentInfo, pk=pk)
+    if request.method == "POST":
+        student.delete()
+        messages.success(request, "Đã xoá học sinh.")
+        return redirect("student_list")
+    return render(request, "students/student_confirm_delete.html", {"student": student})
