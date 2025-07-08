@@ -53,23 +53,25 @@ class ParentInfoSerializer(serializers.ModelSerializer):
         model = ParentInfo
         fields = '__all__'
 
-
-class SchoolYearSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SchoolYear
-        fields = '__all__'
-
-
 class SemesterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Semester
         fields = '__all__'
 
+class SchoolYearSerializer(serializers.ModelSerializer):
+    semesters = SemesterSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = SchoolYear
+        fields = ['id', 'school_year_name', 'semesters']
 
 class GradeSerializer(serializers.ModelSerializer):
+    grade_type_display = serializers.CharField(source='get_grade_type_display', read_only=True)
+    school_year = SchoolYearSerializer(read_only=True)
+
     class Meta:
         model = Grade
-        fields = '__all__'
+        fields = ['id', 'grade_type', 'grade_type_display', 'school_year']
 
 
 class ClassroomSerializer(serializers.ModelSerializer):
@@ -91,9 +93,12 @@ class SubjectSerializer(serializers.ModelSerializer):
 
 
 class CurriculumSerializer(serializers.ModelSerializer):
+    grade = GradeSerializer()
+    subject = SubjectSerializer()
+
     class Meta:
         model = Curriculum
-        fields = '__all__'
+        fields = ['id', 'grade', 'subject']
 
 
 class TranscriptSerializer(serializers.ModelSerializer):

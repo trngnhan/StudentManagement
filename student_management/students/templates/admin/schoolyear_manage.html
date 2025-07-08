@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Quản lý Năm học{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="text-center text-primary fw-bold">📆 Quản lý Năm học</h2>
+
+  <!-- Thông báo -->
+  <div id="messageBox" class="alert d-none mt-3"></div>
+
+  <!-- Form tạo năm học -->
+  <div class="card mt-4">
+    <div class="card-header bg-primary text-white">➕ Tạo Năm học</div>
+    <div class="card-body">
+      <form id="addYearForm" class="row g-2">
+        <div class="col-md-10">
+          <input type="text" class="form-control" id="newYearName" placeholder="VD: Năm học 2025 - 2026" required>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-success w-100">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Danh sách năm học -->
+  <div class="mt-5">
+      <h4 class="mb-3 text-primary fw-bold">📋 Danh sách Năm học</h4>
+      <div id="schoolYearList" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+        <div class="col text-center text-muted" id="loadingMsg">Đang tải...</div>
+      </div>
+    </div>
+</div>
+
+<script>
+  const messageBox = document.getElementById("messageBox");
+  const schoolYearList = document.getElementById("schoolYearList");
+
+  function showMessage(msg, type = "success", duration = 3000) {
+    messageBox.textContent = msg;
+    messageBox.className = `alert alert-${type}`;
+    messageBox.classList.remove("d-none");
+    setTimeout(() => messageBox.classList.add("d-none"), duration);
+  }
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  async function loadSchoolYears() {
+      const res = await fetch("/school-years/");
+      const data = await res.json();
+      const list = document.getElementById("schoolYearList");
+      list.innerHTML = "";
+
+      if (data.length === 0) {
+        list.innerHTML = `<div class="col text-center text-muted">Chưa có năm học nào.</div>`;
+        return;
+      }
+
+      data.forEach(year => {
+          list.innerHTML += `
+            <div class="col" id="schoolyear-card-${year.id}">
+              <div class="card shadow-sm h-100 border-primary">
+                <div class="card-body text-center">
+                  <h5 class="card-title text-primary fw-bold">
+                    📘 ${year.school_year_name}
+                  </h5>
+                  <div class="mt-3 d-flex justify-content-center gap-2">
+                    <a href="/schoolyear/${year.id}/semesters/" class="btn btn-sm btn-outline-info">
+                      📂 Xem học kỳ
+                    </a>
+                    <button class="btn btn-sm btn-danger" onclick="deleteSchoolYear(${year.id})">
+                      🗑️ Xoá
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+    }
+
+  loadSchoolYears();
+
+  document.getElementById("addYearForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const name = document.getElementById("newYearName").value.trim();
+      if (!name) {
+        showMessage("Vui lòng nhập tên năm học.", "danger");
+        return;
+      }
+
+      const res = await fetch("/school-years/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken")
+        },
+        body: JSON.stringify({ school_year_name: name })
+      });
+
+      if (res.ok) {
+        showMessage("Thêm năm học thành công!");
+        document.getElementById("newYearName").value = "";
+        loadSchoolYears();
+      } else {
+        showMessage("Không thể thêm năm học. Kiểm tra dữ liệu hoặc quyền truy cập.", "danger");
+      }
+    });
+
+  async function deleteSchoolYear(id) {
+      if (!confirm("Bạn có chắc chắn muốn xoá năm học này?")) return;
+
+      try {
+        const res = await fetch(`/school-years/${id}/delete/`, {
+          method: "DELETE",
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken")
+          }
+        });
+
+        if (res.ok || res.status === 204) {
+          const card = document.getElementById(`schoolyear-card-${id}`);
+          if (card) card.remove();
+          showMessage("Đã xoá năm học!");
+        } else {
+          const data = await res.json();
+          alert("Lỗi: " + (data.detail || "Không thể xoá năm học."));
+        }
+      } catch (error) {
+        alert("Vui lòng xoá học kỳ trước!!!");
+      }
+    }
+</script>
+{% endblock %}

@@ -3,178 +3,285 @@
 {% block title %}Quản lý Môn học{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/subject_manage.css' %}">
-    <link rel="stylesheet" href="{% static 'css/base_effects.css' %}">
+<link rel="stylesheet" href="{% static 'css/subject_manage.css' %}">
+<link rel="stylesheet" href="{% static 'css/base_effects.css' %}">
 {% endblock %}
 
 {% block content %}
-{% if messages %}
-  <div>
-      {% for message in messages %}
-          <div class="alert alert-{{ message.tags }}">
-              {{ message }}
-          </div>
-      {% endfor %}
-  </div>
-{% endif %}
-
 <div class="container mt-3">
-    <h2 class="text-center text-primary fw-bold">📘 Quản lý Môn học</h2>
+  <h2 class="text-center text-primary fw-bold">📘 Quản lý Môn học</h2>
 </div>
+
+<div id="subjectMessage" class="alert d-none"></div>
 
 <ul class="nav nav-tabs mt-4" id="mainTab" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="subject-tab" data-bs-toggle="tab" data-bs-target="#subject" type="button" role="tab">📚 Danh sách môn học</button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="curriculum-tab" data-bs-toggle="tab" data-bs-target="#curriculum" type="button" role="tab">📋 Chương trình học</button>
-    </li>
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#subject">📚 Danh sách môn học</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#curriculum">📋 Chương trình học</button>
+  </li>
 </ul>
 
-<div class="tab-content mt-3" id="mainTabContent">
-    <!-- Danh sách môn học -->
-    <div class="tab-pane fade show active" id="subject" role="tabpanel">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="mb-0">📘 Danh sách môn học</h3>
-        </div>
-
-    <div class="pb-md-1">
-        <input type="text" id="subjectSearch" class="form-control" placeholder="🔍 Tìm môn học...">
+<div class="tab-content mt-3">
+  <!-- Tab 1: Môn học -->
+  <div class="tab-pane fade show active" id="subject">
+    <div class="mb-3">
+      <input type="text" id="subjectSearch" class="form-control" placeholder="🔍 Tìm môn học...">
     </div>
 
-    <!-- Form thêm môn học -->
-    <form method="post" class="row g-2 mb-4">
-        {% csrf_token %}
-        <div class="col-md-9">
-            <input type="text" name="subject_name" class="form-control" placeholder="Nhập tên môn học" required>
-        </div>
-        <div class="col-md-3 text-end">
-            <button type="submit" name="add_subject" class="btn btn-success w-100">➕ Thêm</button>
-        </div>
+    <form id="addSubjectForm" class="row g-2 mb-4">
+      <div class="col-md-9">
+        <input type="text" id="newSubjectName" class="form-control" placeholder="Nhập tên môn học" required>
+      </div>
+      <div class="col-md-3 text-end">
+        <button type="submit" class="btn btn-success w-100">➕ Thêm</button>
+      </div>
     </form>
 
-    <!-- Bảng môn học -->
     <table class="table table-bordered table-hover">
-        <thead>
-            <tr>
-                <th style="width: 10%;">Mã</th>
-                <th>Tên môn học</th>
-                <th style="width: 20%;" class="text-center">Hành động</th>
-            </tr>
-        </thead>
-        <tbody id="subjectTableBody">  <!-- 👈 thêm id -->
-            {% for subject in subjects %}
-            <tr>
-                <td>{{ subject.id }}</td>
-                <td>{{ subject.subject_name }}</td>
-                <td class="text-center">
-                    <a href="{% url 'edit_subject' subject.id %}" class="btn btn-sm btn-warning">✏️ Sửa</a>
-                    <a href="{% url 'delete_subject' subject.id %}" class="btn btn-sm btn-danger"
-                       onclick="return confirm('Xác nhận xoá môn học này?')">🗑️ Xoá</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="3" class="text-center">Chưa có môn học nào.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+      <thead>
+        <tr>
+          <th style="width: 10%;">Mã</th>
+          <th>Tên môn học</th>
+          <th style="width: 20%;" class="text-center">Hành động</th>
+        </tr>
+      </thead>
+      <tbody id="subjectTableBody">
+        <tr><td colspan="3" class="text-center">Đang tải...</td></tr>
+      </tbody>
     </table>
-</div>
+  </div>
 
-    <!-- Chương trình học -->
-    <div class="tab-pane fade" id="curriculum" role="tabpanel">
-        <h3>🧩 Thêm môn học vào chương trình</h3>
-{#        <div class="pb-md-1">#}
-{#            <input type="text" id="subjectSearch" class="form-control" placeholder="🔍 Tìm môn học...">#}
-{#        </div>#}
-        <form method="post" class="row g-3 mt-2">
-            {% csrf_token %}
-            <div class="col-md-6">
-                <label for="gradeSelect" class="form-label">Chọn khối</label>
-                <select id="gradeSelect" class="form-select" name="grade">
-                    {% for grade in grades %}
-                        <option value="{{ grade.id }}">{{ grade.get_grade_type_display }} - {{ grade.school_year.school_year_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label for="subjectSelect" class="form-label">Chọn môn học</label>
-                <select id="subjectSelect" class="form-select" name="subject">
-                    {% for subject in subjects %}
-                        <option value="{{ subject.id }}">{{ subject.subject_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-12 text-end">
-                <form method="post" class="row g-3 mt-2">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-success mt-2">➕ Thêm vào chương trình</button>
-                </form>
-            </div>
-        </form>
+  <!-- Tab 2: Chương trình học -->
+  <div class="tab-pane fade" id="curriculum">
+    <h4>🧩 Thêm môn học vào chương trình</h4>
+    <div id="curriculumMessage" class="alert d-none"></div>
+    <form id="addCurriculumForm" class="row g-3 mt-2">
+      <div class="col-md-6">
+        <label for="gradeSelect" class="form-label">Chọn khối</label>
+        <select id="gradeSelect" class="form-select" required></select>
+      </div>
+      <div class="col-md-6">
+        <label for="subjectSelect" class="form-label">Chọn môn học</label>
+        <select id="subjectSelect" class="form-select" required></select>
+      </div>
+      <div class="col-12 text-end">
+        <button type="submit" class="btn btn-success mt-2">➕ Thêm vào chương trình</button>
+      </div>
+    </form>
 
-        <hr class="my-4">
-        <h4>📋 Danh sách môn học theo khối</h4>
-        <table class="table table-striped table-bordered">
-            <thead>
-                <tr>
-                    <th style="width: 50%;">Khối</th>
-                    <th>Môn học</th>
-                </tr>
-            </thead>
-            <tbody>
-               {% for item in curriculum %}
-                <tr>
-                    <td>{{ item.grade.get_grade_type_display }} - {{ item.grade.school_year.school_year_name }}</td>
-                    <td>{{ item.subject.subject_name }}</td>
-                </tr>
-               {% empty %}
-                <tr>
-                    <td colspan="2" class="text-center">Chưa có môn học nào được phân vào khối.</td>
-                </tr>
-               {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    <hr class="my-4">
+    <h4>📋 Danh sách môn học theo khối</h4>
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>Khối</th>
+          <th>Môn học</th>
+        </tr>
+      </thead>
+      <tbody id="curriculumTableBody">
+        <tr><td colspan="2" class="text-center">Đang tải...</td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-    const searchInput = document.getElementById("subjectSearch");
-    const tbody = document.getElementById("subjectTableBody");
+    function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.startsWith(name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+    }
 
-    searchInput.addEventListener("input", function () {
-      const query = this.value.trim();
+    const csrftoken = getCookie('csrftoken');
+</script>
 
-      const searchUrl = query
-        ? `/subject_manage/search/?q=${encodeURIComponent(query)}`
-        : `/subject_manage/search/`;
+<script>
+  const subjectTableBody = document.getElementById("subjectTableBody");
+  const curriculumTableBody = document.getElementById("curriculumTableBody");
+  const gradeSelect = document.getElementById("gradeSelect");
+  const subjectSelect = document.getElementById("subjectSelect");
+  const messageBox = document.getElementById("subjectMessage");
 
-      fetch(searchUrl)
-        .then(response => response.json())
-        .then(data => {
-          tbody.innerHTML = "";
+    function showCurriculumMessage(text, type = "success", duration = 3000) {
+      const msgBox = document.getElementById("curriculumMessage");
+      msgBox.textContent = text;
+      msgBox.className = `alert alert-${type}`;
+      msgBox.classList.remove("d-none");
 
-          if (data.results.length === 0) {
-            tbody.innerHTML = `
-              <tr>
-                <td colspan="3" class="text-center">Không tìm thấy môn học nào.</td>
-              </tr>`;
-            return;
-          }
+      setTimeout(() => msgBox.classList.add("d-none"), duration);
+    }
 
-          data.results.forEach(item => {
-            tbody.innerHTML += `
-              <tr>
-                <td>${item.id}</td>
-                <td>${item.name}</td>
-                <td class="text-center">
-                  <a href="/subject_manage/edit/${item.id}/" class="btn btn-sm btn-warning">✏️ Sửa</a>
-                  <a href="/subject_manage/delete/${item.id}/" class="btn btn-sm btn-danger" onclick="return confirm('Xác nhận xoá môn học này?')">🗑️ Xoá</a>
-                </td>
-              </tr>`;
-          });
+  async function loadSubjects(query = "") {
+      const url = query ? `/subjects/search/?q=${encodeURIComponent(query)}` : `/subjects/`;
+
+      const accessToken = sessionStorage.getItem("access");
+
+      const res = await fetch(url, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`
+        }
+      });
+
+      if (!res.ok) {
+        subjectTableBody.innerHTML = `<tr><td colspan="3" class="text-danger text-center">Không có quyền truy cập dữ liệu.</td></tr>`;
+        return;
+      }
+
+      const data = await res.json();
+      const results = data.results || data;
+
+      subjectTableBody.innerHTML = "";
+      subjectSelect.innerHTML = "";
+
+      if (results.length === 0) {
+        subjectTableBody.innerHTML = `<tr><td colspan="3" class="text-center">Không có môn học.</td></tr>`;
+      } else {
+        results.forEach(s => {
+          subjectTableBody.innerHTML += `
+            <tr>
+              <td>${s.id}</td>
+              <td>${s.subject_name || s.name}</td>
+              <td class="text-center">
+                <a href="/subject_manage/edit/${s.id}/" class="btn btn-sm btn-warning">✏️ Sửa</a>
+                <button class="btn btn-sm btn-danger" onclick="deleteSubject(${s.id})">🗑️ Xoá</button>
+              </td>
+            </tr>`;
+          subjectSelect.innerHTML += `<option value="${s.id}">${s.subject_name || s.name}</option>`;
         });
+      }
+    }
+
+  // Thêm môn học mới
+  document.getElementById("addSubjectForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const name = document.getElementById("newSubjectName").value.trim();
+      const messageBox = document.getElementById("subjectMessage");
+
+      if (!name) return;
+
+      const res = await fetch("/subjects/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken,
+        },
+        body: JSON.stringify({ subject_name: name }),
+      });
+
+      if (res.ok) {
+        document.getElementById("newSubjectName").value = "";
+        loadSubjects();
+
+        messageBox.textContent = "Đã thêm môn học thành công!";
+        messageBox.className = "alert alert-success";
+        messageBox.classList.remove("d-none");
+      } else {
+        messageBox.textContent = "Thêm môn học thất bại.";
+        messageBox.className = "alert alert-danger";
+        messageBox.classList.remove("d-none");
+      }
+
+      // Tự ẩn sau 3 giây
+      setTimeout(() => messageBox.classList.add("d-none"), 3000);
+});
+
+  // Xoá môn học
+  async function deleteSubject(id) {
+      if (!confirm("Xác nhận xoá môn học này?")) return;
+
+      const res = await fetch(`/subjects/${id}/`, {
+        method: "DELETE",
+        headers: {
+          "X-CSRFToken": csrftoken,
+        },
+      });
+
+      if (res.ok) {
+        messageBox.textContent = "🗑️ Đã xoá môn học.";
+        messageBox.className = "alert alert-success";
+        messageBox.classList.remove("d-none");
+        setTimeout(() => messageBox.classList.add("d-none"), 5000);
+        loadSubjects();
+      } else {
+        messageBox.textContent = "Không thể xoá môn học.";
+        messageBox.className = "alert alert-danger";
+        messageBox.classList.remove("d-none");
+        setTimeout(() => messageBox.classList.add("d-none"), 3000);
+      }
+    }
+
+  // Tải khối lớp
+  async function loadGrades() {
+    const res = await fetch("/grades/");
+    const data = await res.json();
+    gradeSelect.innerHTML = "";
+    data.forEach(g => {
+      gradeSelect.innerHTML += `<option value="${g.id}">${g.grade_type_display} - ${g.school_year.school_year_name}</option>`;
     });
+  }
+
+  // Thêm vào chương trình học
+  document.getElementById("addCurriculumForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const grade_id = gradeSelect.value;
+    const subject_id = subjectSelect.value;
+
+    const res = await fetch("/curriculums/add/", {
+      method: "POST",
+      headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrftoken,
+      },
+      body: JSON.stringify({ grade_id, subject_id }),
+    });
+
+    if (res.ok) {
+      loadCurriculum();
+      showCurriculumMessage("Đã thêm vào chương trình học thành công!");
+    } else {
+      const err = await res.json();
+      showCurriculumMessage(err.detail || "Lỗi khi thêm vào chương trình.", "danger");
+    }
+  });
+
+  // Tải danh sách chương trình học
+  async function loadCurriculum() {
+    const res = await fetch("/curriculums/");
+    const data = await res.json();
+    curriculumTableBody.innerHTML = "";
+
+    if (data.length === 0) {
+      curriculumTableBody.innerHTML = `<tr><td colspan="2" class="text-center">Không có dữ liệu.</td></tr>`;
+    } else {
+      data.forEach(item => {
+        curriculumTableBody.innerHTML += `
+          <tr>
+            <td>${item.grade.grade_type_display} - ${item.grade.school_year.school_year_name}</td>
+            <td>${item.subject.subject_name}</td>
+          </tr>`;
+      });
+    }
+  }
+
+  document.getElementById("subjectSearch").addEventListener("input", function () {
+    const query = this.value.trim();
+    loadSubjects(query);
+  });
+
+  // Gọi khi trang load
+  loadSubjects();
+  loadGrades();
+  loadCurriculum();
 </script>
 {% endblock %}
