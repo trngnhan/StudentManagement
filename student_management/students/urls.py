@@ -16,7 +16,7 @@ router.register(r'semesters', SemesterViewSet)
 router.register(r'grades', GradeViewSet)
 router.register(r'classrooms', ClassroomViewSet)
 router.register(r'classroom-transfers', ClassroomTransferViewSet)
-router.register(r'subjects', SubjectViewSet)
+router.register(r'subjects', SubjectViewSet, basename='subject')
 router.register(r'curriculums', CurriculumViewSet)
 router.register(r'transcripts', TranscriptViewSet)
 router.register(r'scores', ScoreViewSet)
@@ -28,13 +28,14 @@ urlpatterns = [
     path('', include(router.urls)),
     path('admin/', admin_site.urls),
     #path('api/', include(router.urls)),
+    path('rules_list/', rules_list_view, name='rules_list'),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path('profile/', profile_view, name='profile'),
     path("subject_manage/", subject_manage_view, name="subject_manage"),
     path("subject_manage/edit/<int:subject_id>/", edit_subject_view, name="edit_subject"),
-    path("subject_manage/delete/<int:subject_id>/", delete_subject_view, name="delete_subject"),
-    path("subject_manage/search/", search_subjects_api, name="search_subjects_api"),
+    path("schoolyear_manage/", schoolyear_semester_manage_view, name="schoolyear_manage"),
+    path("schoolyear/<int:year_id>/semesters/", semesters_of_schoolyear_view, name="schoolyear_semesters"),
     path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('admin_dashboard/', admin_dashboard, name='admin_dashboard'),

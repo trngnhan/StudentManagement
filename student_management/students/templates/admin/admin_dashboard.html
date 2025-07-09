@@ -20,11 +20,11 @@
     <a href="/subject_manage/" class="btn btn-outline-dark">
      Quản lý môn học
     </a>
-    <a href="/schoolyear-semesters/" class="btn btn-outline-info">
+    <a href="/schoolyear_manage/" class="btn btn-outline-info">
      Quản lý năm học - học kỳ
     </a>
-    <a href="/rules/" class="btn btn-outline-danger">
-     Thay đổi quy định
+    <a href="/rules_list/" class="btn btn-outline-danger">
+     Quy định
     </a>
     <a href="/rules/" class="btn btn-outline-danger">
      Xem báo cáo thống kê
@@ -32,30 +32,48 @@
 </div>
 
 <script>
-  const token = "{{ request.session.access|default:'' }}";
-  console.log("🚀 Sending token to API:", token);
+  async function ensureToken() {
+    let token = "{{ access_token|default:'' }}";
+    if (token) sessionStorage.setItem("access", token);
 
-  fetch('/admin-info/dashboard/', {
+    if (!token) {
+      const serverToken = "{{ request.session.access|default:'' }}";
+      if (serverToken) {
+        sessionStorage.setItem("access", serverToken);
+        token = serverToken;
+        console.log("Lấy token từ session.");
+      }
+    }
+
+    if (!token) {
+      alert("Vui lòng đăng nhập lại.");
+      window.location.href = "/login/";
+    }
+
+    return token;
+  }
+
+  ensureToken().then(token => {
+    fetch("/admin-info/dashboard/", {
       headers: {
-          'Authorization': 'Bearer ' + token
+        "Authorization": `Bearer ${token}`
       }
-  })
-  .then(async res => {
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-          const text = await res.text();
-          console.warn("⚠️ Phản hồi không phải JSON:", text);
-          throw new Error("API trả về không phải JSON (có thể là lỗi hoặc chưa đăng nhập)");
-      }
+    })
+    .then(res => {
+      if (!res.ok) throw new Error("Không thể tải dữ liệu dashboard");
       return res.json();
-  })
-  .then(data => {
+    })
+    .then(data => {
       document.getElementById("staff-count").innerText = data.total_staff;
       document.getElementById("teacher-count").innerText = data.total_teacher;
       document.getElementById("student-count").innerText = data.total_student;
       document.getElementById("classroom-count").innerText = data.total_classroom;
       document.getElementById("subject-count").innerText = data.total_subject;
-  })
-  .catch(err => alert("❌ " + err.message));
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Không thể tải dữ liệu bảng điều khiển");
+    });
+  });
 </script>
 {% endblock %}

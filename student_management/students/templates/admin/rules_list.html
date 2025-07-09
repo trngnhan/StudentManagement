@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Xem quy định{% endblock %}
+
+{% block header %}Xem quy định{% endblock %}
+
+{% block extra_css %}
+<style>
+    input[type="number"], input[type="text"] {
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Danh sách quy định</h5>
+    </div>
+    <div class="card-body">
+        <form id="ruleForm">
+            <div id="rulesContainer" class="d-grid gap-3"></div>
+            <div class="text-end mt-4">
+                <button type="submit" class="btn btn-success">
+                    💾 Lưu thay đổi
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const rulesContainer = document.getElementById('rulesContainer');
+    const ruleForm = document.getElementById('ruleForm');
+
+    let token = sessionStorage.getItem("access");
+    if (!token) {
+        const serverToken = "{{ request.session.access|default:'' }}";
+        if (serverToken) {
+            sessionStorage.setItem("access", serverToken);
+            token = serverToken;
+        }
+    }
+    if (!token) {
+        alert("Bạn chưa đăng nhập hoặc token đã hết. Vui lòng đăng nhập lại.");
+        return window.location.href = "/login/";
+    }
+
+    fetch('/rules/all_rules/', {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Không thể tải danh sách');
+        return res.json();
+    })
+    .then(data => {
+        if (!Array.isArray(data)) {
+            console.error('Dữ liệu không hợp lệ:', data);
+            return;
+        }
+
+        data.forEach(rule => {
+            const html = `
+                <div class="border rounded p-3 bg-light">
+                    <h6 class="fw-bold text-primary">${rule.rule_name}</h6>
+                    <input type="hidden" name="rule_name" value="${rule.rule_name}">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label>Giá trị tối thiểu</label>
+                            <input type="number" class="form-control" name="min_value_${rule.rule_name}" value="${rule.min_value ?? ''}">
+                        </div>
+                        <div class="col-md-3">
+                            <label>Giá trị tối đa</label>
+                            <input type="number" class="form-control" name="max_value_${rule.rule_name}" value="${rule.max_value ?? ''}">
+                        </div>
+                        <div class="col-md-6">
+                            <label>Nội dung</label>
+                            <input type="text" class="form-control" name="rule_content_${rule.rule_name}" value="${rule.rule_content}">
+                        </div>
+                    </div>
+                </div>
+            `;
+            rulesContainer.insertAdjacentHTML('beforeend', html);
+        });
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Không thể tải danh sách quy định");
+    });
+
+    ruleForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(ruleForm);
+        const ruleNames = [...formData.getAll('rule_name')];
+
+        const payload = ruleNames.map(name => ({
+            rule_name: name,
+            min_value: formData.get(`min_value_${name}`),
+            max_value: formData.get(`max_value_${name}`),
+            rule_content: formData.get(`rule_content_${name}`)
+        }));
+
+        fetch('/rules/update_rules/', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+                'X-CSRFToken': '{{ csrf_token }}'  // dùng nếu CSRF bật
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Lỗi cập nhật");
+            return res.json();
+        })
+        .then(data => {
+            alert('Đã cập nhật thành công!');
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Có lỗi xảy ra khi cập nhật');
+        });
+    });
+});
+</script>
+{% endblock %}

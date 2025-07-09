@@ -9,7 +9,7 @@ from students.models import (
     Subject, SchoolYear, Semester, Grade, Classroom, Curriculum,
     GradeType, SemesterType,
     User, AdminInfo, TeacherInfo, StudentInfo, StaffInfo,
-    Gender, Role
+    Gender, Role, Rule
 )
 from django.utils import timezone
 
@@ -139,3 +139,55 @@ StaffInfo.objects.get_or_create(
 )
 
 print("✅ Sample users created (Admin, Teacher, Student, Staff)")
+
+# --- Quy định hệ thống ---
+rule_data = [
+    {
+        'rule_name': 'age_range',
+        'min_value': 15,
+        'max_value': 20,
+        'rule_content': 'Độ tuổi học sinh từ 15 đến 20'
+    },
+    {
+        'rule_name': 'max_class_size',
+        'min_value': None,
+        'max_value': 40,
+        'rule_content': 'Sĩ số tối đa mỗi lớp là 40 học sinh'
+    },
+    {
+        'rule_name': 'score_15_min_max',
+        'min_value': 1,
+        'max_value': 5,
+        'rule_content': 'Mỗi môn có từ 1 đến 5 cột điểm 15 phút'
+    },
+    {
+        'rule_name': 'test_1_min_max',
+        'min_value': 1,
+        'max_value': 3,
+        'rule_content': 'Mỗi môn có từ 1 đến 3 bài kiểm tra 1 tiết'
+    },
+    {
+        'rule_name': 'final_exam_required',
+        'min_value': 1,
+        'max_value': 1,
+        'rule_content': 'Mỗi môn có 1 bài thi cuối kỳ'
+    },
+    {
+        'rule_name': 'min_average_to_pass',
+        'min_value': 5,
+        'max_value': 10,
+        'rule_content': 'Đạt môn nếu điểm trung bình môn ≥ 5'
+    }
+]
+
+for rule in rule_data:
+    Rule.objects.get_or_create(
+        rule_name=rule['rule_name'],
+        defaults={
+            'min_value': rule['min_value'],
+            'max_value': rule['max_value'],
+            'rule_content': rule['rule_content']
+        }
+    )
+
+print("✅ Rules created")
