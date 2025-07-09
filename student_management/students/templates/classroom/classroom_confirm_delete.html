@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Xóa lớp {{ classroom }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-md-8">
+    <div class="card card-shadow border-0">
+      <div class="card-body text-center">
+        <h5>Bạn có chắc chắn muốn xóa lớp <strong>{{ classroom }}</strong>?</h5>
+        <form method="post" class="d-inline-block">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-rounded">Xóa</button>
+          <a href="{% url 'classroom_management' %}" class="btn btn-outline-secondary ms-2">Hủy</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

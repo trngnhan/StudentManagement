@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static %}
+{% load form_tags %}
+{% block title %}Thêm Học sinh vào lớp{% endblock %}
+{% block content %}
+<h4 class="mb-3">Lớp: <span class="text-primary fw-semibold">{{ classroom }}</span></h4>
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card card-shadow border-0">
+      <div class="card-header bg-success text-white">Thêm học sinh vào lớp</div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form.non_field_errors }}
+          <div class="mb-3">
+            {{ form.student.label_tag }}
+            {{ form.student|add_class:"form-select" }}
+            {{ form.student.errors }}
+          </div>
+          <div class="mb-3">
+            {{ form.transfer_date.label_tag }}
+            {{ form.transfer_date|add_class:"form-control" }}
+            {{ form.transfer_date.errors }}
+          </div>
+          <button type="submit" class="btn btn-success btn-rounded">Thêm học sinh</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card card-shadow border-0">
+      <div class="card-header bg-light fw-semibold">Danh sách học sinh hiện tại</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-striped mb-0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Họ tên</th>
+                <th>Giới tính</th>
+                <th>Ngày sinh</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in classroom.studentinfo_set.all %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ s.name }}</td>
+                <td>{{ s.get_gender_display }}</td>
+                <td>{{ s.birthday|date:"d/m/Y" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center py-4">Chưa có học sinh nào</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

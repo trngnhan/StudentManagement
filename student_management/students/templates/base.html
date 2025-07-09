@@ -23,15 +23,6 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        {# ------ DASHBOARD ------ #}
-                        {% url 'admin_dashboard' as dashboard_url %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.path == dashboard_url %}active{% endif %}"
-                                href="{{ dashboard_url }}">
-                                Dashboard
-                            </a>
-                        </li>
-
                         {# ------ QUẢN LÝ HỌC SINH ------ #}
                         {% url 'student_list' as students_url %}
                         <li class="nav-item">
@@ -42,7 +33,7 @@
                         </li>
 
                         {# ------ QUẢN LÝ LỚP HỌC ------ #}
-                        {% url 'admin_classes' as classes_url %}
+                        {% url 'classroom_management' as classes_url %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.path == classes_url %}active{% endif %}"
                                 href="{{ classes_url }}">
@@ -51,7 +42,7 @@
                         </li>
 
                         {# ------ QUẢN LÝ ĐIỂM DANH ------ #}
-                        {% url 'admin_attendance' as attendance_url %}
+                        {% url 'attendance_management' as attendance_url %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.path == attendance_url %}active{% endif %}"
                                 href="{{ attendance_url }}">
@@ -60,11 +51,11 @@
                         </li>
 
                         {# ------ THỐNG KÊ ------ #}
-                        {% url 'admin_statistics' as stats_url %}
+                        {% url 'subject_manage' as subject_url %}
                         <li class="nav-item">
-                            <a class="nav-link {% if request.path == stats_url %}active{% endif %}"
-                                href="{{ stats_url }}">
-                                Thống kê
+                            <a class="nav-link {% if request.path == subject_url %}active{% endif %}"
+                                href="{{ subject_url }}">
+                                Quản lý Môn Học
                             </a>
                         </li>
                     </ul>
@@ -103,5 +94,7 @@
     <footer fragment="footer" class="mt-auto bg-secondary bg-gradient text-white text-center py-3">
         <p class="mb-0">&copy; 2025 - Hệ thống Quản lý học sinh | Giảng Viên</p>
     </footer>
+
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

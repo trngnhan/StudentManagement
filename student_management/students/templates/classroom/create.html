@@ -1,0 +1,32 @@
+
+{% extends "base.html" %}
+{% load static %}
+{% load form_tags %}
+{% block title %}Tạo Lớp Học {% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-md-8">
+    <div class="card card-shadow border-0">
+      <div class="card-header bg-primary text-white fw-semibold">Tạo lớp học mới</div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form.non_field_errors }}
+          <div class="mb-3">
+            {{ form.classroom_name.label_tag }}
+            {{ form.classroom_name|add_class:"form-control" }}
+            {{ form.classroom_name.errors }}
+          </div>
+          <div class="mb-3">
+            {{ form.grade.label_tag }}
+            {{ form.grade|add_class:"form-select" }}
+            {{ form.grade.errors }}
+          </div>
+          <button type="submit" class="btn btn-primary btn-rounded">Tạo lớp</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

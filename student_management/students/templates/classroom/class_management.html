@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% load static %}
+{% load form_tags %}
+{% block title %}Quản Lý Lớp Học {% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/class_management.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<h3 class="mb-4">Quản lý lớp học</h3>
+
+<div class="card card-shadow border-0 mb-4">
+    <div class="card-body d-flex justify-content-between">
+        <form id="searchForm" class="row g-2">
+            <div class="col-md-10 col-lg-8">
+                <input type="text" name="q" id="searchInput" class="form-control"
+                    placeholder="🔍 Tìm kiếm theo tên lớp hoặc khối...">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary btn-rounded">Tìm kiếm</button>
+            </div>
+        </form>
+        <div>
+            <a href="{% url 'classroom_create' %}" class="btn btn-success mb-3">➕ Thêm Lớp Học</a>
+        </div>
+    </div>
+</div>
+
+<div class="card card-shadow border-1 mb-3">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-secondary table-striped mb-0" id="classTable">
+                <thead>
+                    <tr class="table-success">
+                        <th>STT</th>
+                        <th>Tên lớp</th>
+                        <th>Khối</th>
+                        <th>Sĩ số</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in classes %}
+                    <tr data-name="{{ c.classroom_name|lower }} {{ c.grade.get_grade_type_display|lower }}">
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ c.classroom_name }}</td>
+                        <td>{{ c.grade.get_grade_type_display }}</td>
+                        <td><span class="text-black">{{ c.student_number }}</span></td>
+                        <td>
+                            <a href="{% url 'classroom_update' c.id %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil-square"></i> Sửa
+                            </a>
+                            <a href="{% url 'classroom_delete' c.id %}" class="btn btn-sm btn-outline-danger ms-1">
+                                <i class="bi bi-trash"></i> Xóa
+                            </a>
+                            <button type="button" class="btn btn-sm btn-success ms-1" data-bs-toggle="modal"
+                                data-bs-target="#addStudentModal" data-class-id="{{ c.id }}"
+                                data-class-name="{{ c.classroom_name }}">
+                                <i class="bi bi-person-plus-fill"></i> Thêm Học Sinh
+                            </button>
+                            <button class="btn btn-sm btn-warning ms-1" data-bs-toggle="modal"
+                                data-bs-target="#transferStudentsModal" data-class-id="{{ c.id }}"
+                                data-class-name="{{ c.classroom_name }}"
+                                data-students='{{ studentsByClass|get_item:c.id|default:"[]"|safe }}'>
+                                <i class="bi bi-arrow-left-right"></i> Chuyển Học Sinh
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">Không có lớp nào</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal add students -->
+<div class="modal fade" id="addStudentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm học sinh vào lớp <span id="modalClassName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'classroom_add_students_bulk' %}">
+                {% csrf_token %}
+                <input type="hidden" name="class_id" id="modalClassId">
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="selectAll"></th>
+                                    <th>Họ tên</th>
+                                    <th>Giới tính</th>
+                                    <th>Ngày sinh</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in students %}
+                                <tr>
+                                    <td><input type="checkbox" name="student_ids" value="{{ s.id }}"
+                                            class="studentCheckbox"></td>
+                                    <td>{{ s.name }}</td>
+                                    <td>{{ s.get_gender_display }}</td>
+                                    <td>{{ s.birthday|date:"d/m/Y" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">Không có học sinh khả dụng</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Thêm chọn</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Model chuyển Lớp -->
+<div class="modal fade" id="transferStudentsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chuyển lớp <span id="transferModalClassName"></span></h5><button type="button"
+                    class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'classroom_transfer_students_bulk' %}">{% csrf_token %}
+                <input type="hidden" name="class_id" id="transferModalClassId">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="form-label">Chọn học sinh</label>
+                            <div class="table-responsive" style="max-height:260px;overflow:auto;">
+                                <table class="table table-sm table-striped">
+                                    <tbody id="transferStudentTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-6"><label class="form-label">Lớp mới</label>
+                            <select id="destClassSelect" name="new_class_id" class="form-select mb-3">
+                                {% for c in classes %}
+                                <option value="{{ c.id }}">{{ c.classroom_name }}
+                                    ({{ c.grade.get_grade_type_display }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <label class="form-label">Ngày chuyển</label><input type="date" name="transfer_date"
+                                class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">Hủy</button><button class="btn btn-warning">Chuyển lớp</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Client‑side search filter
+    const searchInput = document.getElementById('searchInput');
+    const rows = document.querySelectorAll('#classTable tbody tr');
+    searchInput?.addEventListener('keyup', e => {
+        const q = e.target.value.toLowerCase().trim();
+        rows.forEach(r => {
+            r.style.display = r.dataset.name.includes(q) ? '' : 'none';
+        });
+    });
+
+    // Pass class info to modal
+    const addStudentModal = document.getElementById('addStudentModal');
+    addStudentModal?.addEventListener('show.bs.modal', event => {
+        const button = event.relatedTarget;
+        document.getElementById('modalClassId').value = button.dataset.classId;
+        document.getElementById('modalClassName').textContent = button.dataset.className;
+        document.getElementById('selectAll').checked = false;
+        document.querySelectorAll('.studentCheckbox').forEach(cb => cb.checked = false);
+    });
+
+    // Select all checkbox
+    document.getElementById('selectAll')?.addEventListener('change', e => {
+        document.querySelectorAll('.studentCheckbox').forEach(cb => cb.checked = e.target.checked);
+    });
+
+    // Search filter
+    const classSearch = document.getElementById('classSearch');
+    const classRows = document.querySelectorAll('#classTable tbody tr');
+    classSearch?.addEventListener('keyup', e => {
+        const q = e.target.value.toLowerCase().trim();
+        classRows.forEach(r => {
+            r.style.display = r.dataset.name.includes(q) ? '' : 'none';
+        });
+    });
+
+    // Transfer modal
+    const transferModal = document.getElementById('transferStudentsModal');
+    transferModal?.addEventListener('show.bs.modal', e => {
+        const btn = e.relatedTarget;
+        const clsId = btn.dataset.classId;
+        const clsName = btn.dataset.className;
+        console.log('RAW‑DATA:', btn.dataset.students);
+        const studentsByClass = JSON.parse(btn.dataset.students || '[]');
+        console.log(studentsByClass);
+        document.getElementById('transferModalClassId').value = clsId;
+        document.getElementById('transferModalClassName').textContent = clsName;
+        // Populate student list
+        const tbody = document.getElementById('transferStudentTableBody');
+        tbody.innerHTML = '';
+        if (studentsByClass.length) {
+            studentsByClass.forEach(st => {
+                tbody.insertAdjacentHTML('beforeend',
+                    `<tr>
+                    <td>
+                        <input type="checkbox" name="student_ids" value="${st.id}">
+                    </td>
+                    <td>${st.name}</td>
+                </tr>`);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="2" class="text-center">Không có Học Sinh</td></tr>';
+        }
+        // Hide option of current class
+        const select = document.getElementById('destClassSelect');
+        [...select.options].forEach(o => { o.hidden = (o.value === clsId); });
+        if (select.value === clsId) { select.selectedIndex = 0; }
+    });
+</script>
+{% endblock %}

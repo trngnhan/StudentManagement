@@ -1,0 +1,31 @@
+table#classTable {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+#classTable thead {
+    background: linear-gradient(90deg, #007bff, #00c6ff);
+    color: white;
+}
+
+#classTable th,
+#classTable td {
+    vertical-align: middle;
+    padding: 12px 16px;
+    font-size: 15px;
+}
+
+#classTable tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+#classTable tbody tr:hover {
+    background-color: #e9f7ff;
+    transition: background-color 0.2s ease-in-out;
+}
+
+#classTable .btn {
+    font-size: 13px;
+    padding: 4px 10px;
+}
