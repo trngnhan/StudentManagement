@@ -41,7 +41,9 @@ urlpatterns = [
     path("attendance/camera/", camera_attendance, name="camera_attendance"),
     path("attendance/mark/",  mark_attendance,  name="mark_attendance"),
     path("student_list/", student_list, name="student_list"),
+    path("home/", student_list, name="home"),
     path("student/create/", student_create, name="student_create"),
     path("student/<int:pk>/edit/", student_update, name="student_update"),
     path("student/<int:pk>/delete/", student_delete, name="student_delete"),
+    path("search_student", search_student_list, name="search_student")
 ]

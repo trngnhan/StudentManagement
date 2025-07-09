@@ -8,10 +8,18 @@
 
 {% block content %}
 
-<form action="@{/admin/teachers}" method="get" class="mb-4">
+<form action="{% url 'search_student' %}" method="get" class="mb-4">
     <div class="input-group">
-        <input type="text" class="form-control" name="username" placeholder="🔍 Tìm theo mã sinh viên">
+        <input type="text" name="q" value="{{ q }}" class="form-control"
+               placeholder="🔍 Mã HS hoặc tên HS">
         <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i> Tìm</button>
+        {% if request.GET.q %}
+        <div class="col-auto">
+            <a href="{% url 'search_student' %}" class="btn btn-secondary">
+                <i class="bi bi-x-lg"></i>
+            </a>
+        </div>  
+        {% endif %}
     </div>
 </form>
 <div class="container mt-4">
@@ -48,7 +56,8 @@
                     <td>{{ s.phone }}</td>
                     <td>
                         <a href="{% url 'student_update' s.id %}" class="btn btn-sm btn-outline-primary me-1">✏️ Sửa</a>
-                        <a href="{% url 'student_delete' s.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xác nhận xoá học sinh này?')">🗑️ Xoá</a>
+                        <a href="{% url 'student_delete' s.id %}" class="btn btn-sm btn-outline-danger"
+                            onclick="return confirm('Xác nhận xoá học sinh này?')">🗑️ Xoá</a>
                     </td>
                 </tr>
                 {% empty %}
@@ -59,6 +68,35 @@
             </tbody>
         </table>
     </div>
+    <nav aria-label="Page navigation example ">
+        <ul class="pagination d-flex justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link"
+                   href="?q={{ q }}&page={{ page_obj.previous_page_number }}">«</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">«</span></li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% else %}
+            <li class="page-item">
+                <a class="page-link" href="?q={{ q }}&page={{ num }}">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?q={{ q }}&page={{ page_obj.next_page_number }}">»</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">»</span></li>
+            {% endif %}
+        </ul>
+    </nav>
 </div>
 
 

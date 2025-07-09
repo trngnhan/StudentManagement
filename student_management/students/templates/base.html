@@ -33,7 +33,7 @@
                         </li>
 
                         {# ------ QUẢN LÝ HỌC SINH ------ #}
-                        {% url 'admin_students' as students_url %}
+                        {% url 'student_list' as students_url %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.path == students_url %}active{% endif %}"
                                 href="{{ students_url }}">

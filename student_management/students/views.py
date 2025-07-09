@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from students.form import StudentForm, ParentForm
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
+from django.core.paginator import Paginator
 from .models import *
 from .serializers import *
 from .permissions import *
@@ -26,6 +26,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.conf import settings
 from rest_framework import serializers
+from django.db.models import Q
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -425,3 +426,28 @@ def student_delete(request, pk):
         messages.success(request, "Đã xoá học sinh.")
         return redirect("student_list")
     return render(request, "students/student_confirm_delete.html", {"student": student})
+
+
+def search_student_list(request):
+    q = request.GET.get('q', '').strip()
+    students = StudentInfo.objects.all()
+    if q:
+        if q.isdigit():
+            students = students.filter(id=int(q))
+        else:
+            students = students.filter(
+                Q(user__username__icontains=q) | Q(name__icontains=q)
+            )
+
+    # --- Phân trang ---
+    page_number = request.GET.get('page', 1)
+    paginator = Paginator(students, 10)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "page_obj": page_obj,     # dùng để lặp & tạo nút trang
+        "q": q,
+    }
+
+    context = {"students": students, "q": q}
+    return render(request, "students\student_list.html", context)

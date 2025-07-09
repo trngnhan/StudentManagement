@@ -1,27 +1,65 @@
+body {
+    background: linear-gradient(to right, #f9f9f9, #e6f0ff);
+}
+
 .form-container {
-        background: #f8f9fa;
-        border-radius: 15px;
-        padding: 30px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
-    }
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    padding: 30px 40px;
+    transition: all 0.3s ease;
+}
 
-    .form-title {
-        font-weight: 600;
-        margin-bottom: 20px;
-        color: #2c3e50;
-    }
+.form-title {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 25px;
+}
 
-    .btn-success {
-        background-color: #28a745;
-        border-color: #28a745;
-    }
+.form-label {
+    color: #34495e;
+    font-weight: 500;
+}
 
-    .btn-secondary {
-        background-color: #6c757d;
-        border-color: #6c757d;
-    }
+.input-group input,
+.input-group select,
+.input-group textarea {
+    border-radius: 8px !important;
+    border: 1px solid #ccc;
+    transition: border-color 0.3s;
+}
 
-    label {
-        font-weight: 500;
-        color: #343a40;
-    }
+.input-group input:focus,
+.input-group select:focus,
+.input-group textarea:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+.form-check-input {
+    margin-top: 0.3rem;
+}
+
+.btn-success {
+    background-color: #27ae60;
+    border-color: #27ae60;
+}
+
+.btn-success:hover {
+    background-color: #219150;
+    border-color: #219150;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+    border-color: #95a5a6;
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
+    border-color: #7f8c8d;
+}
+
+.text-danger {
+    margin-top: 4px;
+}
