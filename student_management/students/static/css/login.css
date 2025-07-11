@@ -5,7 +5,7 @@ html, body {
 }
 
 body {
-  background: url('/static/images/loginn-bg.jpg') no-repeat center center fixed;
+  background: url('/static/images/login-bg.jpg') no-repeat center center fixed;
   background-size: cover;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
