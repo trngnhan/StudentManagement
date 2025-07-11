@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Thống kê điểm số các lớp{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4 text-center">Thống kê điểm số các lớp</h2>
+    <div class="row">
+        <div class="col-lg-7 col-md-12 mb-4">
+            <table class="table table-bordered table-striped shadow-sm">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Lớp</th>
+                        <th>Số học sinh</th>
+                        <th>Điểm trung bình lớp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in report %}
+                    <tr>
+                        <td>{{ item.classroom.classroom_name }}</td>
+                        <td>{{ item.student_count }}</td>
+                        <td>{{ item.class_avg }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-lg-5 col-md-12 d-flex align-items-center justify-content-center">
+            <div style="width:100%;max-width:400px;">
+                <canvas id="scoreChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

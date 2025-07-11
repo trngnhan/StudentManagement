@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Môn học phụ trách{% endblock %}
+
+{% block content %}
+<h4 class="text-primary">📘 Môn học lớp {{ classroom.classroom_name }}</h4>
+<p class="text-muted">Năm học: <strong>{{ classroom.grade.school_year.school_year_name }}</strong></p>
+<div class="row mt-4">
+  {% for sub in subjects %}
+    <div class="col-md-4 mt-4">
+      <a href="{% url 'teacher_score_detail_view' sub.transcript_id %}" class="card text-decoration-none shadow-sm">
+        <div class="card-body text-center">
+          <h6 class="card-title text-info fw-bold">{{ sub.subject_name }}</h6>
+        </div>
+      </a>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

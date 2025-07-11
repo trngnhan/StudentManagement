@@ -1,11 +1,17 @@
+from io import BytesIO
+
+import openpyxl
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db.models import RestrictedError
 from django.views.decorators.http import require_GET
 from django_filters.rest_framework import DjangoFilterBackend
+from openpyxl.utils import get_column_letter
+from openpyxl.workbook import Workbook
 from rest_framework import viewsets, generics, status
 from rest_framework.permissions import IsAuthenticated
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
@@ -29,6 +35,8 @@ from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from django.conf import settings
 from rest_framework import serializers
+from collections import defaultdict
+from django.db.models import Avg, Count, Q, Max
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -418,7 +426,7 @@ def login_view(request):
             if role == 'admin':
                 return redirect('admin_dashboard')
             elif role == 'teacher':
-                return redirect('teacher_dashboard')
+                return redirect('teacher_class_list')
             elif role == 'student':
                 return redirect('student_dashboard')
             else:
@@ -562,3 +570,175 @@ def student_delete(request, pk):
         messages.success(request, "Đã xoá học sinh.")
         return redirect("student_list")
     return render(request, "students/student_confirm_delete.html", {"student": student})
+
+def teacher_class_list_view(request):
+    if request.session.get("role") != "teacher":
+        return redirect("login")
+
+    teacher = get_object_or_404(TeacherInfo, user__username=request.session.get("username"))
+
+    class_ids = Transcript.objects.filter(teacher_info=teacher).values_list("classroom_id", flat=True).distinct()
+    classes = Classroom.objects.filter(id__in=class_ids).order_by("classroom_name")
+
+    return render(request, "teacher/teacher_class_list.html", {
+        "classes": classes,
+    })
+
+
+def teacher_subject_scores_view(request, classroom_id):
+    if request.session.get("role") != "teacher":
+        return redirect("login")
+
+    teacher = get_object_or_404(TeacherInfo, user__username=request.session.get("username"))
+    classroom = get_object_or_404(Classroom, id=classroom_id)
+
+    transcripts = Transcript.objects.filter(teacher_info=teacher, classroom=classroom)
+
+    subjects = [{
+        'subject_id': tr.curriculum.subject.id,
+        'subject_name': tr.curriculum.subject.subject_name,
+        'transcript_id': tr.id,
+    } for tr in transcripts]
+
+    return render(request, "teacher/teacher_subjects.html", {
+        "classroom": classroom,
+        "subjects": subjects,
+    })
+
+def teacher_score_detail_view(request, transcript_id):
+    if request.session.get("role") != "teacher":
+        return redirect("login")
+
+    transcript = get_object_or_404(Transcript, id=transcript_id)
+
+    # === POST xử lý lưu hoặc thêm điểm ===
+    if request.method == "POST":
+        # === Xuất Excel ===
+        if "export_excel" in request.POST:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Scores"
+
+            ws.append(["Học sinh", "Loại điểm", "Điểm"])
+
+            for score in Score.objects.filter(transcript=transcript).select_related("student_info"):
+                ws.append([score.student_info.name, score.get_score_type_display(), score.score_number])
+
+            buffer = BytesIO()
+            wb.save(buffer)
+            buffer.seek(0)
+
+            response = HttpResponse(buffer.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f'attachment; filename=bang_diem_{transcript.classroom.classroom_name}.xlsx'
+            return response
+
+        # === Lưu điểm đã chỉnh sửa ===
+        for key, value in request.POST.items():
+            if key.startswith("score_"):
+                try:
+                    score_id = int(key.replace("score_", ""))
+                    score = Score.objects.get(id=score_id)
+                    score.score_number = float(value)
+                    score.save()
+                except:
+                    continue
+
+        # === Thêm điểm mới ===
+        rules = {r.rule_name: r for r in Rule.objects.all()}
+
+        for key in request.POST:
+            if key.startswith("add_score_for_"):
+                student_id = key.replace("add_score_for_", "")
+                try:
+                    student = StudentInfo.objects.get(id=student_id)
+                    score_type = int(request.POST.get(f"new_score_type_{student_id}"))
+                    score_value = float(request.POST.get(f"new_score_value_{student_id}"))
+                except:
+                    continue
+
+                # Kiểm tra giới hạn theo quy định
+                current_count = Score.objects.filter(
+                    transcript=transcript,
+                    student_info=student,
+                    score_type=score_type
+                ).count()
+
+                score_type_map = {
+                    ScoreType.SCORE_15_MIN: "15 phút",
+                    ScoreType.SCORE_1_PERIOD: "1 tiết",
+                    ScoreType.FINAL_EXAM: "thi cuối kỳ",
+                }
+
+                rule = None
+                if score_type == ScoreType.SCORE_15_MIN:
+                    rule = rules.get("score_15_min_max")
+                elif score_type == ScoreType.SCORE_1_PERIOD:
+                    rule = rules.get("test_1_min_max")
+                elif score_type == ScoreType.FINAL_EXAM:
+                    rule = rules.get("final_exam_required")
+
+                if rule and rule.max_value is not None and current_count >= rule.max_value:
+                    messages.error(
+                        request,
+                        f"Học sinh {student.name} đã đủ số điểm {score_type_map.get(score_type, 'khác')} theo quy định."
+                    )
+                else:
+                    Score.objects.create(
+                        student_info=student,
+                        transcript=transcript,
+                        score_type=score_type,
+                        score_number=score_value
+                    )
+                    messages.success(request, f"Đã thêm điểm cho học sinh {student.name}.")
+
+        return redirect("teacher_score_detail_view", transcript_id=transcript.id)
+
+    # === GET: Hiển thị dữ liệu ===
+    scores = Score.objects.filter(transcript=transcript).select_related("student_info").order_by("score_type")
+    grouped_scores = {}
+    for score in scores:
+        sid = score.student_info.id
+        if sid not in grouped_scores:
+            grouped_scores[sid] = {
+                "student": score.student_info,
+                "scores": []
+            }
+        grouped_scores[sid]["scores"].append(score)
+
+    return render(request, "teacher/teacher_score_detail.html", {
+        "transcript": transcript,
+        "grouped_scores": list(grouped_scores.values()),
+    })
+
+def class_score_report_view(request):
+    if request.session.get("role") != "admin":
+        return redirect("login")
+
+    classes = Classroom.objects.all().order_by("classroom_name")
+    report = []
+
+    for classroom in classes:
+        # Lấy học sinh đang thuộc lớp này (giả sử transfer mới nhất là lớp hiện tại)
+        latest_transfers = ClassroomTransfer.objects.filter(classroom=classroom).values('student_info').annotate(
+            latest_id=Max('id')
+        )
+        latest_transfer_ids = [item['latest_id'] for item in latest_transfers]
+        students = StudentInfo.objects.filter(classroom_transfers__id__in=latest_transfer_ids).distinct()
+        student_count = students.count()
+
+        # Tính điểm trung bình từng học sinh
+        student_scores = []
+        for student in students:
+            avg_score = Score.objects.filter(student_info=student).aggregate(avg=Avg("score_number"))["avg"]
+            student_scores.append(avg_score if avg_score is not None else 0)
+        class_avg = sum(student_scores) / student_count if student_count > 0 else 0
+
+        report.append({
+            "classroom": classroom,
+            "student_count": student_count,
+            "class_avg": round(class_avg, 2),
+        })
+
+    return render(request, "admin/class_score_report.html", {
+        "report": report,
+    })

@@ -4,7 +4,7 @@
 {% block title %}Đăng nhập{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/login.css' %}">
+<link rel="stylesheet" href="{% static 'css/loginn.css' %}">
 <link rel="stylesheet" href="{% static 'css/base_effects.css' %}">
 {% endblock %}
 
@@ -23,11 +23,11 @@
           {% csrf_token %}
           <div class="mb-3">
               <label for="username" class="form-label">Tên đăng nhập</label>
-              <input type="text" class="form-control" id="username" name="username" required autofocus>
+              <input type="text" class="form-control" id="username" name="username" required autofocus placeholder="Nhập tên đăng nhập">
           </div>
           <div class="mb-3">
               <label for="password" class="form-label">Mật khẩu</label>
-              <input type="password" class="form-control" id="password" name="password" required>
+              <input type="password" class="form-control" id="password" name="password" required placeholder="Nhập mật khẩu">
           </div>
           <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
       </form>

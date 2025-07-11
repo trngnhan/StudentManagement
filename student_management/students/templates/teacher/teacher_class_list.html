@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Lớp bạn phụ trách{% endblock %}
+
+{% block content %}
+<h4 class="text-primary">📚 Danh sách lớp bạn phụ trách</h4>
+<div class="row mt-4">
+  {% for c in classes %}
+    <div class="col-md-4">
+      <a href="{% url 'teacher_subject_scores_view' c.id %}" class="card text-decoration-none shadow-sm">
+        <div class="card-body text-center">
+          <h5 class="card-title fw-bold text-primary">{{ c.classroom_name }}</h5>
+        </div>
+      </a>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -27,7 +27,6 @@ router.register(r'admin-info', AdminInfoViewSet, basename='admin-info')
 urlpatterns = [
     path('', include(router.urls)),
     path('admin/', admin_site.urls),
-    #path('api/', include(router.urls)),
     path('rules_list/', rules_list_view, name='rules_list'),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
@@ -36,6 +35,10 @@ urlpatterns = [
     path("subject_manage/edit/<int:subject_id>/", edit_subject_view, name="edit_subject"),
     path("schoolyear_manage/", schoolyear_semester_manage_view, name="schoolyear_manage"),
     path("schoolyear/<int:year_id>/semesters/", semesters_of_schoolyear_view, name="schoolyear_semesters"),
+    path('class-score-report/', class_score_report_view, name='class_score_report'),
+    path("teacher/classes/", teacher_class_list_view, name="teacher_class_list"),
+    path("teacher/class/<int:classroom_id>/scores/", teacher_subject_scores_view, name="teacher_subject_scores_view"),
+    path("teacher/scores/<int:transcript_id>/", teacher_score_detail_view, name="teacher_score_detail_view"),
     path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('admin_dashboard/', admin_dashboard, name='admin_dashboard'),
