@@ -766,7 +766,8 @@ def classroom_transfer_students_bulk(request):
             ClassroomTransfer.objects.create(
                 student_info  = student,
                 classroom     = dest_class,
-                transfer_date = transfer_date
+                transfer_date = transfer_date,
+                changed_classroom = True,
             )
             moved += 1
 
@@ -819,7 +820,7 @@ def attendance_management(request):
     students_not_checked = (
         StudentInfo.objects
         .annotate(has_checked=Exists(attended_qs))
-        .filter(has_checked=False)              # chưa điểm danh
+        .filter(has_checked=False)
     )
 
     # 4. Gom vào dict theo lớp hiện tại
@@ -834,13 +835,12 @@ def attendance_management(request):
                 "birthday": stu.birthday.strftime("%d/%m/%Y") if stu.birthday else ""
             })
 
-    # 5. JSON‑hoá từng list để đưa thẳng vào data-* trong template
     students_json_by_class = {
         cid: json.dumps(lst, ensure_ascii=False) for cid, lst in students_by_class.items()
     }
 
     context = {
-        "date": selected_date,                 # để hiển thị / chọn lại ngày
+        "date": selected_date,
         "classes": classes,
         "students_by_class": students_json_by_class
     }
