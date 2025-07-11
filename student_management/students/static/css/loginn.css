@@ -1,0 +1,115 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: url('/static/images/loginn-bg.jpg') no-repeat center center fixed;
+  background-size: cover;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.login-wrapper {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 20px;
+  left: 0;
+  z-index: 10;
+  background: transparent;
+}
+
+.login-form {
+  background: rgba(255, 255, 255, 0.98);
+  padding: 46px 32px 32px 32px;
+  border-radius: 22px;
+  box-shadow: 0 12px 32px 0 rgba(78,84,200,0.18), 0 2px 4px rgba(0,0,0,0.08);
+  width: 100%;
+  max-width: 400px;
+  transition: box-shadow 0.3s;
+  border: 2px solid #ececff;
+  position: relative;
+}
+
+.login-form:hover {
+  box-shadow: 0 18px 40px 0 rgba(78,84,200,0.22), 0 4px 8px rgba(0,0,0,0.10);
+}
+
+.login-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 30px;
+  color: #4e54c8;
+  letter-spacing: 1px;
+}
+
+.login-form .form-label {
+  font-weight: 500;
+  color: #4e54c8;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.login-form .form-control {
+  border-radius: 8px;
+  border: 1.5px solid #d1d5fa;
+  padding: 12px 14px;
+  font-size: 1rem;
+  margin-bottom: 18px;
+  transition: border 0.2s, box-shadow 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+  background: #f7f8ff;
+}
+
+.login-form .form-control:focus {
+  border-color: #8f94fb;
+  outline: none;
+  box-shadow: 0 0 0 2px #e0e4ff;
+  background: #fff;
+}
+
+.btn-primary {
+  background: linear-gradient(90deg, #4e54c8 0%, #8f94fb 100%);
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 12px 0;
+  box-shadow: 0 2px 8px rgba(78,84,200,0.10);
+  transition: background 0.2s, transform 0.1s;
+  color: #fff;
+  width: 100%;
+  cursor: pointer;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background: linear-gradient(90deg, #8f94fb 0%, #4e54c8 100%);
+  transform: translateY(-2px) scale(1.03);
+}
+
+.alert-danger {
+  border-radius: 8px;
+  margin-bottom: 18px;
+  font-size: 1rem;
+  padding: 10px 0;
+  background: #ffeaea;
+  color: #d32f2f;
+  border: 1px solid #ffcdd2;
+  text-align: center;
+}
+
+@media (max-width: 500px) {
+  .login-form {
+    padding: 18px 8px 18px 8px;
+    max-width: 98vw;
+  }
+  .login-title {
+    font-size: 1.3rem;
+  }
+}

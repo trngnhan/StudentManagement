@@ -1,4 +1,6 @@
 import os
+import random
+
 import django
 
 # --- Thiết lập Django ---
@@ -9,7 +11,7 @@ from students.models import (
     Subject, SchoolYear, Semester, Grade, Classroom, Curriculum,
     GradeType, SemesterType,
     User, AdminInfo, TeacherInfo, StudentInfo, StaffInfo,
-    Gender, Role, Rule
+    Gender, Role, Rule, Score, ScoreType, Transcript, ClassroomTransfer
 )
 from django.utils import timezone
 
@@ -191,3 +193,75 @@ for rule in rule_data:
     )
 
 print("✅ Rules created")
+
+# Lấy lớp đầu tiên
+classroom = Classroom.objects.first()
+semester = classroom.grade.school_year.semesters.first()
+curriculums = classroom.grade.curriculums.all()[:3]  # chọn 3 môn đầu
+
+# Lấy giáo viên đầu tiên
+from students.models import TeacherInfo
+teacher = TeacherInfo.objects.first()
+
+# Tạo 5 học sinh mới
+for i in range(1, 6):
+    username = f"student_extra_{i}"
+    user, _ = User.objects.get_or_create(username=username, defaults={"role": Role.STUDENT})
+    user.set_password("student123")
+    user.save()
+
+    student, _ = StudentInfo.objects.get_or_create(
+        user=user,
+        defaults={
+            "name": f"Học sinh phụ {i}",
+            "gender": Gender.MALE if i % 2 == 0 else Gender.FEMALE,
+            "phone": f"09000000{i+10}",
+            "email": f"extra{i}@example.com",
+            "address": "TP. Hồ Chí Minh",
+            "birthday": timezone.datetime(2007, 1, i+1),
+            "status": True
+        }
+    )
+
+    # Gán vào lớp
+    ClassroomTransfer.objects.get_or_create(
+        student_info=student,
+        classroom=classroom
+    )
+
+    # Tạo điểm cho từng môn
+    for curriculum in curriculums:
+        transcript, _ = Transcript.objects.get_or_create(
+            classroom=classroom,
+            semester=semester,
+            curriculum=curriculum,
+            defaults={"teacher_info": teacher}
+        )
+
+        # Tạo 3 điểm 15 phút
+        for _ in range(3):
+            Score.objects.create(
+                student_info=student,
+                transcript=transcript,
+                score_type=ScoreType.SCORE_15_MIN,
+                score_number=round(random.uniform(5, 10), 1)
+            )
+
+        # Tạo 2 điểm 1 tiết
+        for _ in range(2):
+            Score.objects.create(
+                student_info=student,
+                transcript=transcript,
+                score_type=ScoreType.SCORE_1_PERIOD,
+                score_number=round(random.uniform(5, 10), 1)
+            )
+
+        # Tạo 1 điểm thi cuối kỳ
+        Score.objects.create(
+            student_info=student,
+            transcript=transcript,
+            score_type=ScoreType.FINAL_EXAM,
+            score_number=round(random.uniform(5, 10), 1)
+        )
+
+print("✅ Đã tạo 5 học sinh và điểm cho mỗi môn theo đúng quy định.")

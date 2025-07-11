@@ -31,9 +31,9 @@ class GradeType(models.IntegerChoices):
 
 
 class ScoreType(models.IntegerChoices):
-    FIFTEEN_MINUTE = 1, '15 phút'
-    ONE_PERIOD = 2, '1 tiết'
-    EXAM = 3, 'Thi'
+    SCORE_15_MIN = 1, "Điểm 15 phút"
+    SCORE_1_PERIOD = 2, "Điểm 1 tiết"
+    FINAL_EXAM = 3, "Điểm thi cuối kỳ"
 
 
 # -------- USER --------
