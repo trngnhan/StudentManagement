@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static %}
+{% load form_tags %}
+{% block title %}Chuyển Lớp {% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-md-8">
+    <div class="card card-shadow border-0">
+      <div class="card-header bg-warning text-white">Chuyển lớp cho học sinh</div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form.non_field_errors }}
+          <div class="mb-3">
+            {{ form.student.label_tag }}
+            {{ form.student|add_class:"form-select" }}
+            {{ form.student.errors }}
+          </div>
+          <div class="mb-3">
+            {{ form.new_classroom.label_tag }}
+            {{ form.new_classroom|add_class:"form-select" }}
+            {{ form.new_classroom.errors }}
+          </div>
+          <div class="mb-3">
+            {{ form.transfer_date.label_tag }}
+            {{ form.transfer_date|add_class:"form-control" }}
+            {{ form.transfer_date.errors }}
+          </div>
+          <button type="submit" class="btn btn-warning text-white btn-rounded">Chuyển lớp</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

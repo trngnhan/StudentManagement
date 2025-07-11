@@ -4,7 +4,7 @@ import openpyxl
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.db.models import RestrictedError
+from django.db.models import RestrictedError, Max
 from django.views.decorators.http import require_GET
 from django_filters.rest_framework import DjangoFilterBackend
 from openpyxl.utils import get_column_letter
@@ -15,9 +15,9 @@ from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
-from students.form import StudentForm, ParentForm
+from students.form import *
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
+from django.core.paginator import Paginator
 from .models import *
 from .serializers import *
 from .permissions import *
@@ -37,6 +37,8 @@ from django.conf import settings
 from rest_framework import serializers
 from collections import defaultdict
 from django.db.models import Avg, Count, Q, Max
+from django.db.models import Q
+from django.db import transaction
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -742,3 +744,283 @@ def class_score_report_view(request):
     return render(request, "admin/class_score_report.html", {
         "report": report,
     })
+
+def search_student_list(request):
+    q = request.GET.get('q', '').strip()
+    students = StudentInfo.objects.all()
+    if q:
+        if q.isdigit():
+            students = students.filter(id=int(q))
+        else:
+            students = students.filter(
+                Q(user__username__icontains=q) | Q(name__icontains=q)
+            )
+
+    # --- Phân trang ---
+    page_number = request.GET.get('page', 1)
+    paginator = Paginator(students, 10)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "page_obj": page_obj,
+        "q": q,
+    }
+
+    context = {"students": students, "q": q}
+    return render(request, "students\student_list.html", context)
+
+
+def classroom_create(request):
+    if request.method == "POST":
+        form = ClassroomForm(request.POST)
+        if form.is_valid():
+            classroom = form.save(commit=False)
+            classroom.student_number = 0
+            classroom.save()
+            messages.success(request, "Đã tạo lớp thành công.")
+            return redirect("classroom_create")
+    else:
+        form = ClassroomForm()
+    return render(request, "classroom\create.html", {"form": form})
+
+
+def add_student_to_classroom(request, pk):
+    classroom = get_object_or_404(Classroom, pk=pk)
+    if request.method == "POST":
+        form = AddStudentForm(request.POST)
+        if form.is_valid():
+            student = form.cleaned_data["student"]
+            if student.get_current_classroom():
+                messages.warning(request, "Học sinh đã có lớp.")
+            else:
+                ClassroomTransfer.objects.create(
+                    student_info=student,
+                    classroom=classroom,
+                    transfer_date=form.cleaned_data.get("transfer_date"),
+                )
+                classroom.student_number += 1
+                classroom.save(update_fields=["student_number"])
+                messages.success(request, f"Đã thêm {student.name} vào lớp {classroom}.")
+                return redirect("add_student_to_classroom", pk=pk)
+    else:
+        form = AddStudentForm()
+    return render(request, "classroom/add_student.html", {"form": form, "classroom": classroom})
+
+
+@transaction.atomic
+def transfer_student(request):
+    if request.method == "POST":
+        form = TransferStudentForm(request.POST)
+        if form.is_valid():
+            student = form.cleaned_data["student"]
+            new_classroom = form.cleaned_data["new_classroom"]
+            old_classroom = student.get_current_classroom()
+            if old_classroom == new_classroom:
+                messages.warning(request, "Học sinh đã ở lớp này.")
+            else:
+                ClassroomTransfer.objects.create(
+                    student_info=student,
+                    classroom=new_classroom,
+                    transfer_date=form.cleaned_data.get("transfer_date"),
+                )
+                if old_classroom:
+                    old_classroom.student_number = max(0, old_classroom.student_number - 1)
+                    old_classroom.save()
+                new_classroom.student_number += 1
+                new_classroom.save()
+                messages.success(request, f"Đã chuyển {student.name} sang lớp {new_classroom}.")
+                return redirect("transfer_student")
+    else:
+        form = TransferStudentForm()
+    return render(request, "classroom/transfer.html", {"form": form})
+
+
+def class_management(request):
+    classes = Classroom.objects.select_related("grade").order_by("grade__grade_type", "classroom_name")
+
+    students = (
+        StudentInfo.objects
+        .annotate(last_date=Max("classroom_transfers__transfer_date"))
+        .select_related()
+    )
+
+    students_by_class = {}
+    for s in students:
+        cur = s.get_current_classroom()
+        if cur:
+            lst = students_by_class.setdefault(cur.id, [])
+            lst.append({"id": s.id, "name": s.name})
+
+    students_json_by_class = {
+        k: json.dumps(v, ensure_ascii=False) for k, v in students_by_class.items()
+    }
+
+    context = {
+        "classes": classes,
+        "studentsByClass": students_json_by_class,
+        "students": students.filter(last_date__isnull=True),
+    }
+    print(context)
+    return render(request, "classroom/class_management.html", context)
+
+
+def classroom_add_students_bulk(request):
+    if request.method == "POST":
+        class_id = request.POST.get("class_id")
+        student_ids = request.POST.getlist("student_ids")
+        classroom = get_object_or_404(Classroom, id=class_id)
+        added = 0
+        for student_id in student_ids:
+            student = StudentInfo.objects.get(id=student_id)
+            # kiểm tra đã có lớp chưa
+            if student.get_current_classroom() != classroom:
+                ClassroomTransfer.objects.create(
+                    student_info=student,
+                    classroom=classroom,
+                    transfer_date=timezone.now()
+                )
+                added += 1
+        
+        if added:
+            classroom.student_number += added
+            classroom.save(update_fields=["student_number"])
+            messages.success(request, f"Đã thêm {added} học sinh vào lớp {classroom.classroom_name}.")
+        else:
+            messages.warning(request, "Không có học sinh nào được thêm.")
+    return redirect("classroom_management")
+
+def classroom_update(request, pk):
+    classroom = get_object_or_404(Classroom, pk=pk)
+    if request.method == "POST":
+        form = ClassroomForm(request.POST, instance=classroom)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Đã cập nhật lớp học.")
+            return redirect("classroom_management")
+    else:
+        form = ClassroomForm(instance=classroom)
+
+    return render(request, "classroom/classroom_update.html",
+                  {"form": form, "classroom": classroom})
+
+
+def classroom_delete(request, pk):
+    classroom = get_object_or_404(Classroom, pk=pk)
+    if request.method == "POST":
+        classroom.delete()
+        messages.success(request, f"Đã xóa lớp {classroom.classroom_name}.")
+        return redirect("classroom_management")
+
+    return render(request, "classroom/classroom_confirm_delete.html",
+                  {"classroom": classroom})
+
+
+def classroom_transfer_students_bulk(request):
+    if request.method == "POST":
+        # Lớp nguồn & lớp đích
+        src_class_id  = request.POST.get("class_id")
+        dest_class_id = request.POST.get("new_class_id")
+        src_class     = get_object_or_404(Classroom, pk=src_class_id)
+        dest_class    = get_object_or_404(Classroom, pk=dest_class_id)
+
+        student_ids   = request.POST.getlist("student_ids")
+        transfer_date = request.POST.get("transfer_date") or timezone.now().date()
+
+        if not student_ids:
+            messages.warning(request, "Bạn chưa chọn học sinh nào.")
+            return redirect("classroom_management")
+
+        moved = 0
+        for sid in student_ids:
+            try:
+                student = StudentInfo.objects.get(pk=sid)
+            except StudentInfo.DoesNotExist:
+                continue
+
+            # Bỏ qua nếu đã ở lớp đích
+            if student.get_current_classroom() == dest_class:
+                continue
+
+            # Tạo bản ghi chuyển lớp
+            ClassroomTransfer.objects.create(
+                student_info  = student,
+                classroom     = dest_class,
+                transfer_date = transfer_date
+            )
+            moved += 1
+
+        # Cập nhật sĩ số hai lớp (nếu thực sự có HS được chuyển)
+        if moved:
+            src_class.student_number = max(0, src_class.student_number - moved)
+            dest_class.student_number += moved
+            src_class.save(update_fields=["student_number"])
+            dest_class.save(update_fields=["student_number"])
+            messages.success(
+                request,
+                f"Đã chuyển {moved} học sinh sang lớp {dest_class.classroom_name}."
+            )
+        else:
+            messages.info(request, "Không có học sinh nào được chuyển.")
+
+    # Quay về trang quản lý lớp
+    return redirect("classroom_management")
+
+
+# views.py
+import json
+from datetime import datetime
+from django.db.models import Exists, OuterRef
+from django.shortcuts import render
+from django.utils import timezone
+
+from .models import Classroom, StudentInfo, Attendance
+
+
+def attendance_management(request):
+    # 1. Ngày cần kiểm tra
+    date_param = request.GET.get("date")         
+    if date_param:                                
+        try:
+            selected_date = datetime.strptime(date_param, "%Y-%m-%d").date()
+        except ValueError:
+            selected_date = timezone.localdate() 
+    else:
+        selected_date = timezone.localdate()
+    # 2. Danh sách lớp
+    classes = (
+        Classroom.objects
+        .select_related("grade")
+        .order_by("grade__grade_type", "classroom_name")
+    )
+
+    # 3. Subquery kiểm tra đã điểm danh?
+    attended_qs = Attendance.objects.filter(student=OuterRef("pk"), date=selected_date)
+    students_not_checked = (
+        StudentInfo.objects
+        .annotate(has_checked=Exists(attended_qs))
+        .filter(has_checked=False)              # chưa điểm danh
+    )
+
+    # 4. Gom vào dict theo lớp hiện tại
+    students_by_class = {}
+    for stu in students_not_checked:
+        cur_cls = stu.get_current_classroom()
+        if cur_cls:
+            students_by_class.setdefault(cur_cls.id, []).append({
+                "id": stu.id,
+                "name": stu.name,
+                "gender_display": stu.get_gender_display(),
+                "birthday": stu.birthday.strftime("%d/%m/%Y") if stu.birthday else ""
+            })
+
+    # 5. JSON‑hoá từng list để đưa thẳng vào data-* trong template
+    students_json_by_class = {
+        cid: json.dumps(lst, ensure_ascii=False) for cid, lst in students_by_class.items()
+    }
+
+    context = {
+        "date": selected_date,                 # để hiển thị / chọn lại ngày
+        "classes": classes,
+        "students_by_class": students_json_by_class
+    }
+    return render(request, "attendance/attendance_management.html", context)

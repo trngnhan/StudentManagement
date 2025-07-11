@@ -28,9 +28,13 @@ urlpatterns = [
     path('', include(router.urls)),
     path('admin/', admin_site.urls),
     path('rules_list/', rules_list_view, name='rules_list'),
+    # url profile
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path('profile/', profile_view, name='profile'),
+    path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # url QLHB
     path("subject_manage/", subject_manage_view, name="subject_manage"),
     path("subject_manage/edit/<int:subject_id>/", edit_subject_view, name="edit_subject"),
     path("schoolyear_manage/", schoolyear_semester_manage_view, name="schoolyear_manage"),
@@ -42,10 +46,24 @@ urlpatterns = [
     path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('admin_dashboard/', admin_dashboard, name='admin_dashboard'),
+    # url QLDD
     path("attendance/camera/", camera_attendance, name="camera_attendance"),
     path("attendance/mark/",  mark_attendance,  name="mark_attendance"),
+    path("attendance/management", attendance_management, name="attendance_management"),
+    # url QLHS
+    path("home/", student_list, name="home"),
     path("student_list/", student_list, name="student_list"),
     path("student/create/", student_create, name="student_create"),
     path("student/<int:pk>/edit/", student_update, name="student_update"),
     path("student/<int:pk>/delete/", student_delete, name="student_delete"),
+    path("search_student", search_student_list, name="search_student"),
+    # url QLLH
+    path("classroom/class_management/", class_management, name="classroom_management"),
+    path("classroom/create/", classroom_create, name="classroom_create"),
+    path("classroom/<int:pk>/add-student/", add_student_to_classroom, name="add_student_to_classroom"),
+    path("classroom/transfer/", transfer_student, name="transfer_student"),
+    path("classroom/add-students-bulk/", classroom_add_students_bulk, name="classroom_add_students_bulk"),
+    path("classroom/<int:pk>/update/", classroom_update, name="classroom_update"),
+    path("classroom/<int:pk>/delete/", classroom_delete, name="classroom_delete"),
+    path("classroom/classroom_transfer_students_bulk", classroom_transfer_students_bulk, name="classroom_transfer_students_bulk")
 ]
