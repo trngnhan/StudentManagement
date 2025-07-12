@@ -9,11 +9,11 @@
 
 {% block content %}
 <div class="row text-center mt-4">
-  <div class="col"><h5>Nhân viên</h5><p id="staff-count">...</p></div>
-  <div class="col"><h5>Giáo viên</h5><p id="teacher-count">...</p></div>
-  <div class="col"><h5>Học sinh</h5><p id="student-count">...</p></div>
-  <div class="col"><h5>Lớp học</h5><p id="classroom-count">...</p></div>
-  <div class="col"><h5>Môn học</h5><p id="subject-count">...</p></div>
+  <div class="col"><h5>Nhân viên</h5><p>{{ total_staff }}</p></div>
+  <div class="col"><h5>Giáo viên</h5><p>{{ total_teacher }}</p></div>
+  <div class="col"><h5>Học sinh</h5><p>{{ total_student }}</p></div>
+  <div class="col"><h5>Lớp học</h5><p>{{ total_classroom }}</p></div>
+  <div class="col"><h5>Môn học</h5><p>{{ total_subject }}</p></div>
 </div>
 
 <div class="text-center mt-5 d-flex justify-content-center flex-wrap gap-3">
@@ -30,50 +30,4 @@
      Xem báo cáo thống kê
     </a>
 </div>
-
-<script>
-  async function ensureToken() {
-    let token = "{{ access_token|default:'' }}";
-    if (token) sessionStorage.setItem("access", token);
-
-    if (!token) {
-      const serverToken = "{{ request.session.access|default:'' }}";
-      if (serverToken) {
-        sessionStorage.setItem("access", serverToken);
-        token = serverToken;
-        console.log("Lấy token từ session.");
-      }
-    }
-
-    if (!token) {
-      alert("Vui lòng đăng nhập lại.");
-      window.location.href = "/login/";
-    }
-
-    return token;
-  }
-
-  ensureToken().then(token => {
-    fetch("/admin-info/dashboard/", {
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
-    })
-    .then(res => {
-      if (!res.ok) throw new Error("Không thể tải dữ liệu dashboard");
-      return res.json();
-    })
-    .then(data => {
-      document.getElementById("staff-count").innerText = data.total_staff;
-      document.getElementById("teacher-count").innerText = data.total_teacher;
-      document.getElementById("student-count").innerText = data.total_student;
-      document.getElementById("classroom-count").innerText = data.total_classroom;
-      document.getElementById("subject-count").innerText = data.total_subject;
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Không thể tải dữ liệu bảng điều khiển");
-    });
-  });
-</script>
 {% endblock %}

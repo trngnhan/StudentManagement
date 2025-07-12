@@ -5,45 +5,39 @@ from students.admin import admin_site
 from .views import *
 
 router = DefaultRouter()
-router.register(r'users', UserViewSet)
-router.register(r'admins', AdminInfoViewSet)
-router.register(r'staffs', StaffInfoViewSet)
-router.register(r'teachers', TeacherInfoViewSet)
-router.register(r'students', StudentInfoViewSet)
-router.register(r'parents', ParentInfoViewSet)
-router.register(r'school-years', SchoolYearViewSet)
-router.register(r'semesters', SemesterViewSet)
-router.register(r'grades', GradeViewSet)
-router.register(r'classrooms', ClassroomViewSet)
-router.register(r'classroom-transfers', ClassroomTransferViewSet)
-router.register(r'subjects', SubjectViewSet, basename='subject')
-router.register(r'curriculums', CurriculumViewSet)
-router.register(r'transcripts', TranscriptViewSet)
-router.register(r'scores', ScoreViewSet)
-router.register(r'attendances', AttendanceViewSet)
-router.register(r'rules', RuleViewSet)
-router.register(r'admin-info', AdminInfoViewSet, basename='admin-info')
 
 urlpatterns = [
     path('', include(router.urls)),
     path('admin/', admin_site.urls),
-    path('rules_list/', rules_list_view, name='rules_list'),
+    path('rules_list/', rules_list_get_view, name='rules_list_get_view'),
+    path('rules_list/update/', rules_list_post_view, name='rules_list_post_view'),
     # url profile
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path('profile/', profile_view, name='profile'),
-    path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     # url QLHB
-    path("subject_manage/", subject_manage_view, name="subject_manage"),
-    path("subject_manage/edit/<int:subject_id>/", edit_subject_view, name="edit_subject"),
-    path("schoolyear_manage/", schoolyear_semester_manage_view, name="schoolyear_manage"),
-    path("schoolyear/<int:year_id>/semesters/", semesters_of_schoolyear_view, name="schoolyear_semesters"),
+    path('subject_manage/', subject_manage_view, name='subject_manage_view'),
+    path('subject_manage/add/', subject_add_view, name='subject_add_view'),
+    path('subject_manage/search/', subject_search_view, name='subject_search_view'),
+    path('subject_manage/edit/<int:subject_id>/', edit_subject_view, name='subject_edit_view'),
+    path('subject_manage/delete/<int:subject_id>/', subject_delete_view, name='subject_delete_view'),
+
+    path('schoolyear_manage/', schoolyear_manage_view, name='schoolyear_manage_view'),
+    path('schoolyear/with-semesters/', schoolyear_with_semesters_view, name='schoolyear_with_semesters_view'),
+    path('school-years/', schoolyears_api_view, name='schoolyears_api_view'),
+    path('school-years/<int:pk>/', schoolyear_api_detail_view, name='schoolyear_api_detail_view'),
+    path('schoolyear/delete/<int:pk>/', schoolyear_delete_view, name='schoolyear_delete_view'),
+    path('schoolyear/<int:year_id>/semesters/', semesters_of_schoolyear_view, name='semesters_of_schoolyear_view'),
+    path('semester/create/', semester_create_view, name='semester_create_view'),
+    path('semester/update/<int:semester_id>/', semester_update_view, name='semester_update_view'),
+    path('semester/delete/<int:semester_id>/', semester_delete_view, name='semester_delete_view'),
+    path('semester/edit/<int:semester_id>/', semester_edit_form_view, name='semester_edit_form_view'),
+
     path('class-score-report/', class_score_report_view, name='class_score_report'),
     path("teacher/classes/", teacher_class_list_view, name="teacher_class_list"),
     path("teacher/class/<int:classroom_id>/scores/", teacher_subject_scores_view, name="teacher_subject_scores_view"),
     path("teacher/scores/<int:transcript_id>/", teacher_score_detail_view, name="teacher_score_detail_view"),
-    path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('admin_dashboard/', admin_dashboard, name='admin_dashboard'),
     # url QLDD
@@ -58,6 +52,10 @@ urlpatterns = [
     path("student/<int:pk>/delete/", student_delete, name="student_delete"),
     path("search_student", search_student_list, name="search_student"),
     # url QLLH
+    path('curriculums/', curriculum_list_view, name='curriculum_list_view'),
+    path('curriculums/add/', curriculum_add_form_view, name='curriculum_add_form_view'),
+    path('curriculums/add/submit/', curriculum_add_view, name='curriculum_add_view'),
+
     path("classroom/class_management/", class_management, name="classroom_management"),
     path("classroom/create/", classroom_create, name="classroom_create"),
     path("classroom/<int:pk>/add-student/", add_student_to_classroom, name="add_student_to_classroom"),

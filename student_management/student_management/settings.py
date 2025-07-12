@@ -27,6 +27,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+SESSION_COOKIE_SECURE = False  # Nếu dùng localhost
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 # Application definition
 

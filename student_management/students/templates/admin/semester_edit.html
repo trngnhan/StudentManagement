@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Sửa học kỳ{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3 class="text-center text-primary fw-bold">✏️ Sửa học kỳ</h3>
+  <div class="card mt-3">
+    <div class="card-header bg-warning text-white">Cập nhật học kỳ</div>
+    <div class="card-body">
+      <form method="post" class="row g-2">
+        {% csrf_token %}
+        <div class="col-md-10">
+          <select name="semester_type" class="form-select" required>
+            <option value="1" {% if semester.semester_type == 1 %}selected{% endif %}>Học kỳ I</option>
+            <option value="2" {% if semester.semester_type == 2 %}selected{% endif %}>Học kỳ II</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-success w-100">Lưu thay đổi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="text-center mt-4">
+    <a href="{% url 'semesters_of_schoolyear_view' semester.school_year.id %}" class="btn btn-outline-secondary">⬅️ Quay lại danh sách học kỳ</a>
+  </div>
+</div>
+{% endblock %}

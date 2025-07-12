@@ -2,10 +2,10 @@ from io import BytesIO
 
 import openpyxl
 from django.contrib import messages
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db.models import RestrictedError, Max
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 from django_filters.rest_framework import DjangoFilterBackend
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook import Workbook
@@ -57,291 +57,315 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         return data
 
-
-class CustomTokenObtainPairView(TokenObtainPairView):
-    serializer_class = CustomTokenObtainPairSerializer
-
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    @action(detail=False, methods=["get"], url_path="me")
-    def me(self, request):
-        user = request.user
-
-        if hasattr(user, "admin_info"):
-            role = "admin"
-        elif hasattr(user, "teacher_info"):
-            role = "teacher"
-        elif hasattr(user, "student_info"):
-            role = "student"
+#======================School Year======================
+@login_required
+def schoolyear_manage_view(request):
+    if request.method == "POST":
+        name = request.POST.get("school_year_name")
+        if not name:
+            messages.error(request, "Tên năm học không được để trống.")
+        elif SchoolYear.objects.filter(school_year_name=name).exists():
+            messages.warning(request, "Năm học đã tồn tại.")
         else:
-            role = "unknown"
+            SchoolYear.objects.create(school_year_name=name)
+            messages.success(request, "Đã thêm năm học mới.")
+        return redirect("schoolyear_manage_view")
+    schoolyears = SchoolYear.objects.all()
+    return render(request, "admin/schoolyear_manage.html", {"schoolyears": schoolyears})
 
-        return Response({
-            "username": user.username,
-            "role": role
-        })
-
-
-class AdminInfoViewSet(viewsets.ModelViewSet):
-    queryset = AdminInfo.objects.all()
-    serializer_class = AdminInfoSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    @action(detail=False, methods=['get'], url_path='dashboard')
-    def dashboard(self, request):
-        data = {
-            "total_staff": StaffInfo.objects.count(),
-            "total_teacher": TeacherInfo.objects.count(),
-            "total_student": StudentInfo.objects.count(),
-            "total_classroom": Classroom.objects.count(),
-            "total_subject": Subject.objects.count(),
+@login_required
+@require_GET
+def schoolyear_with_semesters_view(request):
+    schoolyears = SchoolYear.objects.prefetch_related('semesters').all()
+    data = []
+    for sy in schoolyears:
+        semesters = list(sy.semesters.values())
+        sy_data = {
+            "id": sy.id,
+            "school_year_name": sy.school_year_name,
+            "semesters": semesters
         }
-        return Response(data)
+        data.append(sy_data)
+    return JsonResponse(data, safe=False)
 
+@csrf_exempt
+def schoolyears_api_view(request):
+    if request.method == "GET":
+        schoolyears = SchoolYear.objects.all()
+        data = [{"id": sy.id, "school_year_name": sy.school_year_name} for sy in schoolyears]
+        return JsonResponse(data, safe=False)
+    elif request.method == "POST":
+        import json
+        body = json.loads(request.body)
+        name = body.get("school_year_name")
+        if not name:
+            return JsonResponse({"detail": "Thiếu tên năm học."}, status=400)
+        sy = SchoolYear.objects.create(school_year_name=name)
+        return JsonResponse({"id": sy.id, "school_year_name": sy.school_year_name}, status=201)
 
-class StaffInfoViewSet(viewsets.ModelViewSet):
-    queryset = StaffInfo.objects.all()
-    serializer_class = StaffInfoSerializer
-
-
-class TeacherInfoViewSet(viewsets.ModelViewSet):
-    queryset = TeacherInfo.objects.all()
-    serializer_class = TeacherInfoSerializer
-
-
-class StudentInfoViewSet(viewsets.ModelViewSet):
-    queryset = StudentInfo.objects.all()
-    serializer_class = StudentInfoSerializer
-    permission_classes = [IsAuthenticated, IsStudent]
-
-
-class ParentInfoViewSet(viewsets.ModelViewSet):
-    queryset = ParentInfo.objects.all()
-    serializer_class = ParentInfoSerializer
-
-
-class SchoolYearViewSet(viewsets.ModelViewSet):
-    queryset = SchoolYear.objects.all()
-    serializer_class = SchoolYearSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    @action(detail=False, methods=['get'], url_path='with-semesters')
-    def with_semesters(self, request):
-        queryset = self.get_queryset().prefetch_related('semesters')
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
-    @action(detail=True, methods=["delete"], url_path="", url_name="delete")
-    def delete_schoolyear(self, request, pk=None):
+@csrf_exempt
+def schoolyear_api_detail_view(request, pk):
+    try:
+        sy = SchoolYear.objects.get(pk=pk)
+    except SchoolYear.DoesNotExist:
+        return JsonResponse({"detail": "Không tìm thấy năm học."}, status=404)
+    if request.method == "DELETE":
         try:
-            school_year = self.get_object()
-            school_year.delete()
-            return Response({"message": "Đã xoá năm học."}, status=status.HTTP_204_NO_CONTENT)
+            sy.delete()
+            return JsonResponse({"message": "Đã xoá năm học."}, status=204)
         except RestrictedError:
-            return Response(
+            return JsonResponse(
                 {"detail": "Không thể xoá năm học vì còn học kỳ liên kết. Vui lòng xoá học kỳ trước."},
-                status=status.HTTP_400_BAD_REQUEST
+                status=400
             )
+        
 
-
-class SemesterViewSet(viewsets.ModelViewSet):
-    queryset = Semester.objects.all()
-    serializer_class = SemesterSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        school_year_id = self.request.query_params.get("school_year")
-        if school_year_id:
-            queryset = queryset.filter(school_year_id=school_year_id)
-        return queryset
-
-    @action(detail=False, methods=['post'], url_path='create')
-    def create_semester(self, request):
-        school_year_id = request.data.get("school_year")
-        semester_type = request.data.get("semester_type")
-
-        if not school_year_id or semester_type is None:
-            return Response({"detail": "Thiếu trường school_year hoặc semester_type."}, status=400)
-
-        if Semester.objects.filter(school_year_id=school_year_id, semester_type=semester_type).exists():
-            return Response({"detail": "Học kỳ này đã tồn tại trong năm học."}, status=409)
-
-        semester = Semester.objects.create(
-            school_year_id=school_year_id,
-            semester_type=semester_type
+@login_required
+@require_POST
+def schoolyear_delete_view(request, pk):
+    try:
+        school_year = SchoolYear.objects.get(pk=pk)
+        school_year.delete()
+        return JsonResponse({"message": "Đã xoá năm học."}, status=204)
+    except RestrictedError:
+        return JsonResponse(
+            {"detail": "Không thể xoá năm học vì còn học kỳ liên kết. Vui lòng xoá học kỳ trước."},
+            status=400
         )
-        serializer = self.get_serializer(semester)
-        return Response(serializer.data, status=201)
+    except SchoolYear.DoesNotExist:
+        return JsonResponse({"detail": "Không tìm thấy năm học."}, status=404)
+    
+#======================Semester======================
+@login_required
+def semesters_of_schoolyear_view(request, year_id):
+    school_year = get_object_or_404(SchoolYear, id=year_id)
+    semesters = Semester.objects.filter(school_year=school_year)
+    return render(request, "admin/schoolyear_semesters.html", {
+        "school_year": school_year,
+        "semesters": semesters,
+    })
 
-    @action(detail=True, methods=['put'], url_path='update')
-    def update_semester(self, request, pk=None):
-        try:
-            semester = Semester.objects.get(pk=pk)
-        except Semester.DoesNotExist:
-            return Response({"detail": "Không tìm thấy học kỳ."}, status=404)
-
-        semester_type = request.data.get("semester_type")
+@login_required
+def semester_edit_form_view(request, semester_id):
+    semester = get_object_or_404(Semester, pk=semester_id)
+    if request.method == "POST":
+        semester_type = request.POST.get("semester_type")
         if semester_type is not None:
-            if Semester.objects.filter(school_year=semester.school_year, semester_type=semester_type).exclude(
-                    id=semester.id).exists():
-                return Response({"detail": "Học kỳ đã tồn tại."}, status=409)
-
+            if Semester.objects.filter(school_year=semester.school_year, semester_type=semester_type).exclude(id=semester.id).exists():
+                messages.warning(request, "Học kỳ đã tồn tại.")
+                return redirect("semesters_of_schoolyear_view", year_id=semester.school_year.id)
             semester.semester_type = semester_type
             semester.save()
+            messages.success(request, "Đã cập nhật học kỳ.")
+            return redirect("semesters_of_schoolyear_view", year_id=semester.school_year.id)
+        else:
+            messages.error(request, "Thiếu loại học kỳ.")
+    return render(request, "admin/semester_edit.html", {"semester": semester})
 
-        return Response(SemesterSerializer(semester).data)
+@login_required
+@require_POST
+def semester_create_view(request):
+    school_year_id = request.POST.get("school_year")
+    semester_type = request.POST.get("semester_type")
 
-    @action(detail=True, methods=['delete'], url_path='delete')
-    def delete_semester(self, request, pk=None):
-        try:
-            semester = Semester.objects.get(pk=pk)
-        except Semester.DoesNotExist:
-            return Response({"detail": "Không tìm thấy học kỳ."}, status=404)
+    if not school_year_id or semester_type is None:
+        messages.error(request, "Thiếu trường năm học hoặc loại học kỳ.")
+        return redirect("semesters_of_schoolyear_view", year_id=school_year_id)
 
-        semester.delete()
-        return Response({"detail": "Đã xoá học kỳ."}, status=204)
+    if Semester.objects.filter(school_year_id=school_year_id, semester_type=semester_type).exists():
+        messages.warning(request, "Học kỳ này đã tồn tại trong năm học.")
+        return redirect("semesters_of_schoolyear_view", year_id=school_year_id)
 
+    Semester.objects.create(
+        school_year_id=school_year_id,
+        semester_type=semester_type
+    )
+    messages.success(request, "Đã thêm học kỳ mới.")
+    return redirect("semesters_of_schoolyear_view", year_id=school_year_id)
 
-class GradeViewSet(viewsets.ModelViewSet):
-    queryset = Grade.objects.all()
-    serializer_class = GradeSerializer
+@login_required
+@require_POST
+def semester_update_view(request, semester_id):
+    semester = get_object_or_404(Semester, pk=semester_id)
+    semester_type = request.POST.get("semester_type")
+    if semester_type is not None:
+        if Semester.objects.filter(school_year=semester.school_year, semester_type=semester_type).exclude(id=semester.id).exists():
+            messages.warning(request, "Học kỳ đã tồn tại.")
+            return redirect("semesters_of_schoolyear_view", year_id=semester.school_year.id)
+        semester.semester_type = semester_type
+        semester.save()
+        messages.success(request, "Đã cập nhật học kỳ.")
+    else:
+        messages.error(request, "Thiếu loại học kỳ.")
+    return redirect("semesters_of_schoolyear_view", year_id=semester.school_year.id)
 
+@login_required
+@require_POST
+def semester_delete_view(request, semester_id):
+    semester = get_object_or_404(Semester, pk=semester_id)
+    year_id = semester.school_year.id
+    semester.delete()
+    messages.success(request, "Đã xoá học kỳ.")
+    return redirect("semesters_of_schoolyear_view", year_id=year_id)
+    
+#======================Subject======================
+@login_required
+@require_GET
+def subject_manage_view(request):
+    subjects = Subject.objects.all().order_by("id")
+    grades = Grade.objects.all()
+    curriculums = Curriculum.objects.select_related('grade', 'subject').all()
+    return render(request, "admin/subject_manage.html", {
+        "subjects": subjects,
+        "grades": grades,
+        "curriculums": curriculums,
+    })
 
-class ClassroomViewSet(viewsets.ModelViewSet):
-    queryset = Classroom.objects.all()
-    serializer_class = ClassroomSerializer
+@login_required
+@require_POST
+def subject_delete_view(request, subject_id):
+    subject = get_object_or_404(Subject, id=subject_id)
+    subject.delete()
+    messages.success(request, "Đã xoá môn học.")
+    return redirect("subject_manage_view")
 
+def edit_subject_view(request, subject_id):
+    subject = get_object_or_404(Subject, id=subject_id)
 
-class ClassroomTransferViewSet(viewsets.ModelViewSet):
-    queryset = ClassroomTransfer.objects.all()
-    serializer_class = ClassroomTransferSerializer
+    if request.method == "POST":
+        subject_name = request.POST.get("subject_name")
+        if subject_name:
+            subject.subject_name = subject_name
+            subject.save()
+            messages.success(request, "Đã cập nhật môn học.")
+            return redirect("subject_manage_view")
+        else:
+            messages.error(request, "Tên môn học không được để trống.")
 
+    return render(request, "admin/subject_edit.html", {"subject": subject})
 
-class SubjectViewSet(viewsets.ModelViewSet):
-    queryset = Subject.objects.all().order_by("id")
-    serializer_class = SubjectSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+@login_required
+@require_POST
+def subject_add_view(request):
+    subject_name = request.POST.get("subject_name")
+    if not subject_name:
+        messages.error(request, "Tên môn học không được để trống.")
+        return redirect("subject_manage_view")
+    if Subject.objects.filter(subject_name=subject_name).exists():
+        messages.warning(request, "Tên môn học đã tồn tại.")
+        return redirect("subject_manage_view")
+    Subject.objects.create(subject_name=subject_name)
+    messages.success(request, "Đã thêm môn học mới.")
+    return redirect("subject_manage_view")
 
-    @action(detail=False, methods=['get'], url_path='search', url_name='subject-search')
-    def search(self, request):
-        q = request.GET.get("q", "").strip()
-        subjects = self.queryset.filter(subject_name__icontains=q)[:50] if q else self.queryset[:50]
-        data = [{"id": s.id, "subject_name": s.subject_name} for s in subjects]
-        return Response({"results": data})
+@login_required
+@require_GET
+def subject_search_view(request):
+    q = request.GET.get("q", "").strip()
+    subjects = Subject.objects.filter(subject_name__icontains=q) if q else Subject.objects.all()
+    return render(request, "admin/subject_search.html", {"subjects": subjects, "q": q})
 
-class CurriculumViewSet(viewsets.ModelViewSet):
-    queryset = Curriculum.objects.select_related('grade', 'subject').all()
-    serializer_class = CurriculumSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+#======================Curiculum======================
+@login_required
+@require_GET
+def curriculum_list_view(request):
+    curriculums = Curriculum.objects.select_related('grade', 'subject').all()
+    return render(request, "admin/curriculum_list.html", {"curriculums": curriculums})
 
-    @action(detail=False, methods=['post'], url_path='add')
-    def add_to_curriculum(self, request):
-        grade_id = request.data.get("grade_id")
-        subject_id = request.data.get("subject_id")
+@login_required
+@require_POST
+def curriculum_add_view(request):
+    grade_id = request.POST.get("grade_id")
+    subject_id = request.POST.get("subject_id")
 
-        if not grade_id or not subject_id:
-            return Response({"detail": "Thiếu grade_id hoặc subject_id."}, status=status.HTTP_400_BAD_REQUEST)
+    if not grade_id or not subject_id:
+        messages.error(request, "Thiếu khối lớp hoặc môn học.")
+        return redirect("subject_manage_view")
 
-        try:
-            grade = Grade.objects.get(id=grade_id)
-            subject = Subject.objects.get(id=subject_id)
-        except Grade.DoesNotExist:
-            return Response({"detail": "Không tìm thấy khối lớp."}, status=status.HTTP_404_NOT_FOUND)
-        except Subject.DoesNotExist:
-            return Response({"detail": "Không tìm thấy môn học."}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        grade = Grade.objects.get(id=grade_id)
+        subject = Subject.objects.get(id=subject_id)
+    except Grade.DoesNotExist:
+        messages.error(request, "Không tìm thấy khối lớp.")
+        return redirect("subject_manage_view")
+    except Subject.DoesNotExist:
+        messages.error(request, "Không tìm thấy môn học.")
+        return redirect("subject_manage_view")
 
-        if Curriculum.objects.filter(grade=grade, subject=subject).exists():
-            return Response({"detail": "Môn học này đã có trong chương trình khối này."}, status=status.HTTP_409_CONFLICT)
+    if Curriculum.objects.filter(grade=grade, subject=subject).exists():
+        messages.warning(request, "Môn học này đã tồn tại trong chương trình khối này.")
+        return redirect("subject_manage_view")
 
-        curriculum = Curriculum.objects.create(grade=grade, subject=subject)
-        serializer = self.get_serializer(curriculum)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    Curriculum.objects.create(grade=grade, subject=subject)
+    messages.success(request, "Đã thêm môn học vào chương trình.")
+    return redirect("subject_manage_view")
 
+@login_required
+@require_GET
+def curriculum_add_form_view(request):
+    grades = Grade.objects.all()
+    subjects = Subject.objects.all()
+    return render(request, "admin/curriculum_add.html", {"grades": grades, "subjects": subjects})
 
-class TranscriptViewSet(viewsets.ModelViewSet):
-    queryset = Transcript.objects.all()
-    serializer_class = TranscriptSerializer
+@login_required
+@require_GET
+def curriculum_list_view(request):
+    curriculums = Curriculum.objects.select_related('grade', 'subject').all()
+    return render(request, "admin/curriculum_list.html", {"curriculums": curriculums})
 
+#======================Rule======================
+@login_required
+@require_GET
+def rules_list_get_view(request):
+    role = request.session.get("role")
+    if not role:
+        return redirect("login")
+    is_admin = role == "admin"
+    is_teacher = role == "teacher"
+    is_student = role == "student"
+    rules = Rule.objects.all()
+    context = {
+        "rules": rules,
+        "role": role,
+        "is_admin": is_admin,
+        "is_teacher": is_teacher,
+        "is_student": is_student,
+    }
+    return render(request, "admin/rules_list.html", context)
 
-class ScoreViewSet(viewsets.ModelViewSet):
-    queryset = Score.objects.all()
-    serializer_class = ScoreSerializer
-    permission_classes = [IsAuthenticated, IsTeacher | ReadOnly]
+@login_required
+@require_POST
+def rules_list_post_view(request):
+    for rule in Rule.objects.all():
+        min_value = request.POST.get(f"min_value_{rule.id}")
+        max_value = request.POST.get(f"max_value_{rule.id}")
+        rule_content = request.POST.get(f"rule_content_{rule.id}")
 
+        # Xử lý giá trị rỗng
+        rule.min_value = float(min_value) if min_value not in [None, ''] else None
+        rule.max_value = float(max_value) if max_value not in [None, ''] else None
+        if rule_content is not None:
+            rule.rule_content = rule_content
+        rule.save()
+    messages.success(request, "Đã cập nhật quy định.")
+    return redirect("rules_list_get_view")
 
-class AttendanceViewSet(viewsets.ModelViewSet):
-    queryset = Attendance.objects.all()
-    serializer_class = AttendanceSerializer
-    permission_classes = [IsAuthenticated, IsTeacher | ReadOnly]
-
-
-class RuleViewSet(viewsets.GenericViewSet):
-    queryset = Rule.objects.all()
-    serializer_class = RuleSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated, IsAdmin]
-
-    @action(detail=False, methods=['get'], url_path='all_rules')
-    def all_rules(self, request):
-        rules = self.get_queryset()
-        serializer = self.get_serializer(rules, many=True)
-        return Response(serializer.data)
-
-    @action(detail=False, methods=['put'], url_path='update_rules')
-    def update_rules(self, request):
-        data = request.data
-        updated = []
-
-        for item in data:
-            rule_name = item.get('rule_name')
-            if not rule_name:
-                continue
-            try:
-                rule = Rule.objects.get(rule_name=rule_name)
-                serializer = self.get_serializer(rule, data=item, partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    updated.append(serializer.data)
-            except Rule.DoesNotExist:
-                continue
-
-        return Response(updated, status=200)
-
+@login_required
 def admin_dashboard(request):
     if request.session.get("role") != "admin":
         return redirect('login')
 
+    data = {
+        "total_staff": StaffInfo.objects.count(),
+        "total_teacher": TeacherInfo.objects.count(),
+        "total_student": StudentInfo.objects.count(),
+        "total_classroom": Classroom.objects.count(),
+        "total_subject": Subject.objects.count(),
+    }
     return render(request, "admin/admin_dashboard.html", {
         "username": request.session.get("username"),
+        **data
     })
-
-#------Khai báo các trang web---------
-def rules_list_view(request):
-    context = {
-        "access_token": request.session.get("access"),
-    }
-    return render(request, 'admin/rules_list.html', context)
-
-def subject_manage_view(request):
-    print("access =", request.session.get("access"))
-    print("user =", request.user)
-    print("authenticated =", request.user.is_authenticated)
-
-    context = {
-        "access_token": request.session.get("access"),
-    }
-
-    return render(request, 'admin/subject_manage.html', context)
 
 def camera_attendance(request):
     return render(request, "attendance/camera_attendance.html")
@@ -409,22 +433,26 @@ def login_view(request):
         username = request.POST.get("username")
         password = request.POST.get("password")
 
-        url = request.build_absolute_uri('/token/')
-        response = requests.post(url, data={
-            "username": username,
-            "password": password,
-        })
+        # Xác thực user bằng Django
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)  # Đăng nhập user vào Django
 
-        if response.status_code == 200:
-            data = response.json()
-            request.session['access'] = data['access']
-            request.session['refresh'] = data['refresh']
-            request.session['username'] = data['username']
-            request.session['role'] = data['role']
+            # Lấy role từ user (tùy model, ví dụ nếu có trường role hoặc dùng các info như bạn đã làm)
+            if hasattr(user, 'admin_info'):
+                role = 'admin'
+            elif hasattr(user, 'teacher_info'):
+                role = 'teacher'
+            elif hasattr(user, 'student_info'):
+                role = 'student'
+            else:
+                role = 'unknown'
 
-            print("DEBUG LOGIN:", data)
+            # Lưu thông tin vào session nếu cần
+            request.session['username'] = user.username
+            request.session['role'] = role
 
-            role = data['role']
+            # Chuyển hướng theo quyền
             if role == 'admin':
                 return redirect('admin_dashboard')
             elif role == 'teacher':
@@ -434,6 +462,8 @@ def login_view(request):
             else:
                 return redirect('/')
 
+        # Nếu dùng JWT cho API, bạn có thể gọi API lấy token ở đây nếu cần
+        # Nếu xác thực thất bại
         return render(request, "login.html", {"error": "Sai tên đăng nhập hoặc mật khẩu."})
 
     return render(request, "login.html")
@@ -442,78 +472,40 @@ def logout_view(request):
     request.session.flush()
     return redirect('login')
 
+#======================Profile======================
 from students.models import User
 
+@login_required
 def profile_view(request):
-    if not request.session.get('access'):
-        return redirect('login')
-
-    username = request.session.get('username')
-    role = request.session.get('role')
-
-    try:
-        user = User.objects.get(username=username)
-    except User.DoesNotExist:
-        return redirect('login')
-
+    user = request.user
+    role = None
     profile = None
 
-    if role == 'admin' and hasattr(user, 'admin_info'):
+    if hasattr(user, 'admin_info'):
+        role = 'admin'
         profile = user.admin_info
-    elif role == 'teacher' and hasattr(user, 'teacher_info'):
+    elif hasattr(user, 'teacher_info'):
+        role = 'teacher'
         profile = user.teacher_info
-    elif role == 'staff' and hasattr(user, 'staff_info'):
+    elif hasattr(user, 'staff_info'):
+        role = 'staff'
         profile = user.staff_info
-    elif role == 'student' and hasattr(user, 'student_info'):
+    elif hasattr(user, 'student_info'):
+        role = 'student'
         profile = user.student_info
 
-    print("USERNAME:", username)
-    print("ROLE:", role)
-    print("HAS PROFILE:", bool(profile))
+    # Nếu không xác định được role hoặc profile, chuyển về login
+    if not profile or not role:
+        return redirect('login')
 
     return render(request, 'profile.html', {
         'profile': profile,
         'role': role,
-    })
-
-def edit_subject_view(request, subject_id):
-    subject = get_object_or_404(Subject, id=subject_id)
-
-    if request.method == "POST":
-        subject_name = request.POST.get("subject_name")
-        if subject_name:
-            subject.subject_name = subject_name
-            subject.save()
-            messages.success(request, "Đã cập nhật môn học.")
-            return redirect("subject_manage")
-        else:
-            messages.error(request, "Tên môn học không được để trống.")
-
-    return render(request, "admin/subject_edit.html", {"subject": subject})
-
-def schoolyear_semester_manage_view(request):
-    if not request.session.get("access"):
-        return redirect('login')
-
-    context = {
-        "access_token": request.session.get("access"),
-    }
-    return render(request, "admin/schoolyear_manage.html", context)
-
-def semesters_of_schoolyear_view(request, year_id):
-    if not request.session.get("access"):
-        return redirect("login")
-
-    school_year = get_object_or_404(SchoolYear, id=year_id)
-    semesters = Semester.objects.filter(school_year=school_year)
-
-    return render(request, "admin/schoolyear_semesters.html", {
-        "school_year": school_year,
-        "semesters": semesters,
-        "access_token": request.session.get("access"),
+        'username': user.username,
     })
 
 
+#======================Student======================
 @login_required
 def student_create(request):
     if request.method == "POST":
@@ -586,7 +578,7 @@ def teacher_class_list_view(request):
         "classes": classes,
     })
 
-
+#======================Teacher======================
 def teacher_subject_scores_view(request, classroom_id):
     if request.session.get("role") != "teacher":
         return redirect("login")
@@ -712,6 +704,7 @@ def teacher_score_detail_view(request, transcript_id):
         "grouped_scores": list(grouped_scores.values()),
     })
 
+#======================Classroom======================
 def class_score_report_view(request):
     if request.session.get("role") != "admin":
         return redirect("login")

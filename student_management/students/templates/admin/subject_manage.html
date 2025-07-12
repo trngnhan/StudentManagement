@@ -30,9 +30,10 @@
       <input type="text" id="subjectSearch" class="form-control" placeholder="🔍 Tìm môn học...">
     </div>
 
-    <form id="addSubjectForm" class="row g-2 mb-4">
+    <form method="post" action="{% url 'subject_add_view' %}" class="row g-2 mb-4">
+      {% csrf_token %}
       <div class="col-md-9">
-        <input type="text" id="newSubjectName" class="form-control" placeholder="Nhập tên môn học" required>
+        <input type="text" name="subject_name" class="form-control" placeholder="Nhập tên môn học" required>
       </div>
       <div class="col-md-3 text-end">
         <button type="submit" class="btn btn-success w-100">➕ Thêm</button>
@@ -47,8 +48,22 @@
           <th style="width: 20%;" class="text-center">Hành động</th>
         </tr>
       </thead>
-      <tbody id="subjectTableBody">
-        <tr><td colspan="3" class="text-center">Đang tải...</td></tr>
+      <tbody>
+        {% for subject in subjects %}
+        <tr>
+          <td>{{ subject.id }}</td>
+          <td>{{ subject.subject_name }}</td>
+          <td class="text-center">
+            <a href="{% url 'subject_edit_view' subject.id %}" class="btn btn-sm btn-warning">✏️ Sửa</a>
+            <form method="post" action="{% url 'subject_delete_view' subject.id %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Xác nhận xoá môn học này?')">🗑️ Xoá</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-center">Không có môn học.</td></tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
@@ -57,14 +72,23 @@
   <div class="tab-pane fade" id="curriculum">
     <h4>🧩 Thêm môn học vào chương trình</h4>
     <div id="curriculumMessage" class="alert d-none"></div>
-    <form id="addCurriculumForm" class="row g-3 mt-2">
+    <form method="post" action="{% url 'curriculum_add_view' %}" class="row g-3 mt-2">
+      {% csrf_token %}
       <div class="col-md-6">
         <label for="gradeSelect" class="form-label">Chọn khối</label>
-        <select id="gradeSelect" class="form-select" required></select>
+        <select name="grade_id" id="gradeSelect" class="form-select" required>
+          {% for grade in grades %}
+            <option value="{{ grade.id }}">{{ grade.grade_type_display }} - {{ grade.school_year.school_year_name }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="col-md-6">
         <label for="subjectSelect" class="form-label">Chọn môn học</label>
-        <select id="subjectSelect" class="form-select" required></select>
+        <select name="subject_id" id="subjectSelect" class="form-select" required>
+          {% for subject in subjects %}
+            <option value="{{ subject.id }}">{{ subject.subject_name }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="col-12 text-end">
         <button type="submit" class="btn btn-success mt-2">➕ Thêm vào chương trình</button>
@@ -80,220 +104,36 @@
           <th>Môn học</th>
         </tr>
       </thead>
-      <tbody id="curriculumTableBody">
-        <tr><td colspan="2" class="text-center">Đang tải...</td></tr>
+      <tbody>
+        {% for curriculum in curriculums %}
+        <tr>
+          <td>{{ curriculum.grade.grade_type_display }} - {{ curriculum.grade.school_year.school_year_name }}</td>
+          <td>{{ curriculum.subject.subject_name }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="2" class="text-center">Không có dữ liệu.</td></tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
 <script>
-  // Lấy token từ server session (nếu chưa có)
-  const serverToken = "{{ request.session.access|default:'' }}";
-  if (serverToken && !sessionStorage.getItem("access")) {
-    sessionStorage.setItem("access", serverToken);
-    console.log("✅ Token đã được gán vào sessionStorage.");
-  }
+document.addEventListener("DOMContentLoaded", function() {
+  const input = document.getElementById("subjectSearch");
+  const table = document.querySelector("#subject tbody");
 
-  // Lấy token từ sessionStorage
-  const token = sessionStorage.getItem("access");
-  if (!token) {
-    alert("⚠️ Bạn chưa đăng nhập hoặc phiên đã hết hạn.");
-    window.location.href = "/login/";
-  }
-
-  // Lấy CSRF token từ cookie
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.startsWith(name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-  const csrftoken = getCookie('csrftoken');
-
-  // Tiện ích hiển thị thông báo curriculum
-  function showCurriculumMessage(text, type = "success", duration = 3000) {
-    const msgBox = document.getElementById("curriculumMessage");
-    msgBox.textContent = text;
-    msgBox.className = `alert alert-${type}`;
-    msgBox.classList.remove("d-none");
-    setTimeout(() => msgBox.classList.add("d-none"), duration);
-  }
-
-  const subjectTableBody = document.getElementById("subjectTableBody");
-  const curriculumTableBody = document.getElementById("curriculumTableBody");
-  const gradeSelect = document.getElementById("gradeSelect");
-  const subjectSelect = document.getElementById("subjectSelect");
-  const messageBox = document.getElementById("subjectMessage");
-
-  // Load danh sách môn học
-  async function loadSubjects(query = "") {
-    const url = query ? `/subjects/search/?q=${encodeURIComponent(query)}` : `/subjects/`;
-    const res = await fetch(url, {
-      headers: {
-        "Authorization": `Bearer ${token}`
+  input.addEventListener("input", function() {
+    const filter = input.value.toLowerCase();
+    const rows = table.querySelectorAll("tr");
+    rows.forEach(row => {
+      const subjectNameCell = row.querySelectorAll("td")[1];
+      if (subjectNameCell) {
+        const subjectName = subjectNameCell.textContent.toLowerCase();
+        row.style.display = subjectName.includes(filter) ? "" : "none";
       }
     });
-
-    if (!res.ok) {
-      subjectTableBody.innerHTML = `<tr><td colspan="3" class="text-danger text-center">Không có quyền truy cập dữ liệu.</td></tr>`;
-      return;
-    }
-
-    const data = await res.json();
-    const results = data.results || data;
-    subjectTableBody.innerHTML = "";
-    subjectSelect.innerHTML = "";
-
-    if (results.length === 0) {
-      subjectTableBody.innerHTML = `<tr><td colspan="3" class="text-center">Không có môn học.</td></tr>`;
-    } else {
-      results.forEach(s => {
-        subjectTableBody.innerHTML += `
-          <tr>
-            <td>${s.id}</td>
-            <td>${s.subject_name || s.name}</td>
-            <td class="text-center">
-              <a href="/subject_manage/edit/${s.id}/" class="btn btn-sm btn-warning">✏️ Sửa</a>
-              <button class="btn btn-sm btn-danger" onclick="deleteSubject(${s.id})">🗑️ Xoá</button>
-            </td>
-          </tr>`;
-        subjectSelect.innerHTML += `<option value="${s.id}">${s.subject_name || s.name}</option>`;
-      });
-    }
-  }
-
-  // Thêm môn học
-  document.getElementById("addSubjectForm").addEventListener("submit", async function (e) {
-    e.preventDefault();
-    const name = document.getElementById("newSubjectName").value.trim();
-    if (!name) return;
-
-    const res = await fetch("/subjects/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrftoken,
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify({ subject_name: name })
-    });
-
-    if (res.ok) {
-      document.getElementById("newSubjectName").value = "";
-      loadSubjects();
-      messageBox.textContent = "✅ Đã thêm môn học thành công!";
-      messageBox.className = "alert alert-success";
-    } else {
-      messageBox.textContent = "❌ Thêm môn học thất bại.";
-      messageBox.className = "alert alert-danger";
-    }
-    messageBox.classList.remove("d-none");
-    setTimeout(() => messageBox.classList.add("d-none"), 3000);
   });
-
-  // Xoá môn học
-  async function deleteSubject(id) {
-    if (!confirm("Xác nhận xoá môn học này?")) return;
-
-    const res = await fetch(`/subjects/${id}/`, {
-      method: "DELETE",
-      headers: {
-        "X-CSRFToken": csrftoken,
-        "Authorization": `Bearer ${token}`
-      }
-    });
-
-    if (res.ok) {
-      messageBox.textContent = "🗑️ Đã xoá môn học.";
-      messageBox.className = "alert alert-success";
-      loadSubjects();
-    } else {
-      messageBox.textContent = "❌ Không thể xoá môn học.";
-      messageBox.className = "alert alert-danger";
-    }
-    messageBox.classList.remove("d-none");
-    setTimeout(() => messageBox.classList.add("d-none"), 3000);
-  }
-
-  // Load danh sách khối lớp
-  async function loadGrades() {
-    const res = await fetch("/grades/", {
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
-    });
-    const data = await res.json();
-    gradeSelect.innerHTML = "";
-    data.forEach(g => {
-      gradeSelect.innerHTML += `<option value="${g.id}">${g.grade_type_display} - ${g.school_year.school_year_name}</option>`;
-    });
-  }
-
-  // Thêm vào chương trình học
-  document.getElementById("addCurriculumForm").addEventListener("submit", async function (e) {
-    e.preventDefault();
-    const grade_id = gradeSelect.value;
-    const subject_id = subjectSelect.value;
-
-    const res = await fetch("/curriculums/add/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": csrftoken,
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify({ grade_id, subject_id })
-    });
-
-    if (res.ok) {
-      loadCurriculum();
-      showCurriculumMessage("✅ Đã thêm vào chương trình học!");
-    } else {
-      const err = await res.json();
-      showCurriculumMessage(err.detail || "❌ Lỗi khi thêm vào chương trình.", "danger");
-    }
-  });
-
-  // Load danh sách chương trình học
-  async function loadCurriculum() {
-    const res = await fetch("/curriculums/", {
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
-    });
-    const data = await res.json();
-    curriculumTableBody.innerHTML = "";
-
-    if (data.length === 0) {
-      curriculumTableBody.innerHTML = `<tr><td colspan="2" class="text-center">Không có dữ liệu.</td></tr>`;
-    } else {
-      data.forEach(item => {
-        curriculumTableBody.innerHTML += `
-          <tr>
-            <td>${item.grade.grade_type_display} - ${item.grade.school_year.school_year_name}</td>
-            <td>${item.subject.subject_name}</td>
-          </tr>`;
-      });
-    }
-  }
-
-  // Gọi khi trang load
-  document.getElementById("subjectSearch").addEventListener("input", function () {
-    const query = this.value.trim();
-    loadSubjects(query);
-  });
-
-  loadSubjects();
-  loadGrades();
-  loadCurriculum();
+});
 </script>
 {% endblock %}

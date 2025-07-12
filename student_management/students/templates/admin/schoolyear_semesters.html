@@ -12,13 +12,14 @@
   <div class="card mt-3">
     <div class="card-header bg-info text-white">➕ Thêm học kỳ</div>
     <div class="card-body">
-      <form id="addSemesterForm" class="row g-2">
+      <form method="post" action="{% url 'semester_create_view' %}" class="row g-2">
+        {% csrf_token %}
         <div class="col-md-10">
-          <select id="semesterType" class="form-select" required>
-              <option value="1">Học kỳ I</option>
-              <option value="2">Học kỳ II</option>
+          <select name="semester_type" class="form-select" required>
+            <option value="1">Học kỳ I</option>
+            <option value="2">Học kỳ II</option>
           </select>
-
+          <input type="hidden" name="school_year" value="{{ school_year.id }}">
         </div>
         <div class="col-md-2">
           <button type="submit" class="btn btn-success w-100">Lưu</button>
@@ -30,13 +31,16 @@
   <!-- Danh sách học kỳ -->
   <div id="semesterList" class="d-flex justify-content-center flex-wrap gap-3 mt-4">
     {% for sem in semesters %}
-      <div class="card shadow-sm border-info" style="width: 20rem;" id="semester-card-{{ sem.id }}">
+      <div class="card shadow-sm border-info mb-3" style="width: 20rem;" id="semester-card-{{ sem.id }}">
         <div class="card-body text-center">
           <h5 class="card-title text-info fw-bold" id="sem-title-{{ sem.id }}">📖 {{ sem.get_semester_type_display }}</h5>
           <p class="card-text mb-0">Thuộc năm học: <strong>{{ sem.school_year.school_year_name }}</strong></p>
           <div class="d-flex justify-content-center gap-2 mt-3">
-            <button onclick="editSemester({{ sem.id }}, {{ sem.semester_type }})" class="btn btn-sm btn-warning">✏️ Sửa</button>
-            <button onclick="deleteSemester({{ sem.id }})" class="btn btn-sm btn-danger">🗑️ Xoá</button>
+            <a href="{% url 'semester_edit_form_view' sem.id %}" class="btn btn-sm btn-warning">✏️ Sửa</a>
+            <form method="post" action="{% url 'semester_delete_view' sem.id %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Xác nhận xoá học kỳ này?')">🗑️ Xoá</button>
+            </form>
           </div>
         </div>
       </div>
@@ -46,109 +50,7 @@
   </div>
 
   <div class="text-center mt-4">
-    <a href="{% url 'schoolyear_manage' %}" class="btn btn-outline-secondary">⬅️ Quay lại danh sách năm học</a>
+    <a href="{% url 'schoolyear_manage_view' %}" class="btn btn-outline-secondary">⬅️ Quay lại danh sách năm học</a>
   </div>
 </div>
-
-<script>
-  const yearId = {{ school_year.id }};
-  let token = "{{ access_token|default:'' }}";
-      if (token) {
-        sessionStorage.setItem("access", token);
-      } else {
-        token = sessionStorage.getItem("access");
-      }
-
-      if (!token) {
-        alert("Bạn chưa đăng nhập hoặc phiên đã hết hạn.");
-        window.location.href = "/login/";
-      }
-
-    document.getElementById("addSemesterForm").addEventListener("submit", async function (e) {
-      e.preventDefault();
-
-      const semesterType = parseInt(document.getElementById("semesterType").value);
-
-      const res = await fetch("/semesters/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken"),
-            "Authorization": "Bearer " + token
-          },
-          body: JSON.stringify({
-            semester_type: semesterType,
-            school_year: yearId
-          })
-        });
-
-      if (res.ok) {
-        alert("Đã thêm học kỳ.");
-        location.reload();
-      } else {
-        const data = await res.json();
-        alert("Lỗi: " + (data.detail || "Không thể thêm học kỳ."));
-      }
-    });
-
-    async function deleteSemester(id) {
-      if (!confirm("Bạn có chắc chắn muốn xoá học kỳ này?")) return;
-
-      const res = await fetch(`/semesters/${id}/delete/`, {
-          method: "DELETE",
-          headers: {
-            "X-CSRFToken": getCookie("csrftoken"),
-            "Authorization": "Bearer " + token
-          }
-        });
-
-      if (res.ok || res.status === 204) {
-        document.getElementById(`semester-card-${id}`).remove();
-        alert("Đã xoá học kỳ.");
-      } else {
-        const data = await res.json();
-        alert("Lỗi: " + (data.detail || "Không thể xoá học kỳ."));
-      }
-    }
-
-  async function editSemester(id, currentType) {
-    const newType = prompt("Nhập loại học kỳ mới (1: HK I, 2: HK II):", currentType);
-    if (newType === null || newType === "") return;
-
-    const res = await fetch(`/semesters/${id}/update/`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": getCookie("csrftoken"),
-        "Authorization": "Bearer " + token
-      },
-      body: JSON.stringify({ semester_type: parseInt(newType) })
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      document.getElementById(`sem-title-${id}`).textContent = `📖 ${data.semester_type_display}`;
-      location.reload();
-      alert("Đã cập nhật học kỳ.");
-    } else {
-      const data = await res.json();
-      alert("Lỗi: " + (data.detail || "Không thể cập nhật học kỳ."));
-    }
-  }
-
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let cookie of cookies) {
-        cookie = cookie.trim();
-        if (cookie.startsWith(name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-</script>
 {% endblock %}
