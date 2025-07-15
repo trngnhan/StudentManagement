@@ -60,12 +60,14 @@ def enroll(tolerance: float = 0.6, frames_per_pose: int = 5):
                     cv2.destroyAllWindows()
                     return None
 
-                if time.time() - start > 1:
+                if time.time() - start > 0.5:
                     start = time.time()
-                    locs = face_recognition.face_locations(frame)
+                    # chuyển từ BGR to RGB (dlib cần)
+                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    locs = face_recognition.face_locations(rgb)
                     if len(locs) != 1:
                         continue
-                    enc = face_recognition.face_encodings(frame, locs)[0]
+                    enc = face_recognition.face_encodings(rgb, locs)[0]
                     encodings.append(enc)
                     collected += 1
                     print(f"  + Đã lấy {collected}/{frames_per_pose} frame cho tư thế {label}")
@@ -222,7 +224,8 @@ class StudentInfoAdmin(PersonalInfoAdmin):
         if rep is None:
             self.message_user(request, _("Không lấy được gương mặt."), messages.WARNING)
         else:
-            student.encoding = pickle.dumps(rep); student.save()
+            student.encoding = pickle.dumps(rep)
+            student.save()
             self.message_user(request, _("Đã lưu vector gương mặt."), messages.SUCCESS)
         return redirect(reverse("admin:students_studentinfo_change", args=[object_id]))
 

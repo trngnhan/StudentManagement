@@ -420,7 +420,7 @@ def admin_dashboard(request):
         **data
     })
 
-@role_required("staff")
+@role_required("staff", "admin")
 @login_required
 def camera_attendance(request):
     return render(request, "attendance/camera_attendance.html")
@@ -433,23 +433,30 @@ def mark_attendance(request):
 
     try:
         data_url = json.loads(request.body)["image"]
+        if not data_url:
+            return JsonResponse({"status": "error", "detail": "No image"}, status=400)
         # tách base64
         header, b64 = data_url.split(",", 1)
         img_bytes = base64.b64decode(b64)
         img_array = np.frombuffer(img_bytes, np.uint8)
         frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
 
+        #  chuyển về dạng -> RGB
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
         # detect & encode
-        locs = face_recognition.face_locations(frame)
-        encs = face_recognition.face_encodings(frame, locs)
-
-        if not encs:
+        locs = face_recognition.face_locations(rgb)
+        if len(locs) == 0:
             return JsonResponse({"status": "no_face"})
+        if len(locs) > 1:
+            return JsonResponse({"status": "multi_face", "faces": len(locs)})
 
-        enc = encs[0]
+        # enc luôn là numpy array 128‑d
+        enc = face_recognition.face_encodings(rgb, locs)[0]
 
         # tìm học sinh gần nhất trong DB
         students = StudentInfo.objects.exclude(encoding__isnull=True)
+
         candidates = []
         for s in students:
             known = pickle.loads(s.encoding)
@@ -463,9 +470,16 @@ def mark_attendance(request):
         _, student = sorted(candidates, key=lambda x: x[0])[0]
 
         # ghi bảng điểm danh
+        now = datetime.now()
+        late_time = time(7, 15)
+
         att, _ = Attendance.objects.get_or_create(
-            student=student, date=datetime.today(),
-            defaults={"time_checked": datetime.now().time(), "is_late": False},
+            student=student,
+            date=datetime.today(),
+            defaults={
+                "time_checked": now.time(),
+                "is_late": now.time() > late_time,
+            },
         )
 
         return JsonResponse({
