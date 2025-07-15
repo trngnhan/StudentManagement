@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,17 +14,20 @@
 
     {% block extra_css %}{% endblock %}
 </head>
+
 <body class="d-flex flex-column min-vh-100">
     <header fragment="header" class="w-100">
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container-fluid">
-                <a class="navbar-brand" href="#">🎓 Quản lý Học sinh</a>
+                <a class="navbar-brand" href="/admin_dashboard">🎓 Quản lý Học sinh</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
+                    {% if request.session.username %}
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         {# ------ QUẢN LÝ HỌC SINH ------ #}
+                        {% if request.session.role == "staff" or request.session.role == "admin" %}
                         {% url 'student_list' as students_url %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.path == students_url %}active{% endif %}"
@@ -31,8 +35,10 @@
                                 Quản lý học sinh
                             </a>
                         </li>
+                        {% endif %}
 
                         {# ------ QUẢN LÝ LỚP HỌC ------ #}
+                        {% if request.session.role == "staff" or request.session.role == "admin" %}
                         {% url 'classroom_management' as classes_url %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.path == classes_url %}active{% endif %}"
@@ -40,8 +46,10 @@
                                 Quản lý lớp học
                             </a>
                         </li>
+                        {% endif %}
 
                         {# ------ QUẢN LÝ ĐIỂM DANH ------ #}
+                        {% if request.session.role == "staff" or request.session.role == "admin" %}
                         {% url 'attendance_management' as attendance_url %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.path == attendance_url %}active{% endif %}"
@@ -49,27 +57,79 @@
                                 Quản lý điểm danh
                             </a>
                         </li>
+                        {% endif %}
 
-                        {# ------ THỐNG KÊ ------ #}
-                        {% url 'subject_manage' as subject_url %}
+                        {# ------ Quản lý đề cương------ #}
+                        {% if request.session.role == "admin" %}
+                        {% url 'subject_manage_view' as subject_url %}
                         <li class="nav-item">
                             <a class="nav-link {% if request.path == subject_url %}active{% endif %}"
                                 href="{{ subject_url }}">
                                 Quản lý Môn Học
                             </a>
                         </li>
+                        {% endif %}
+
+                        {# ------ Quản lý năm học------ #}
+                        {% if request.session.role == "admin" %}
+                        {% url 'schoolyear_manage_view' as subject_url %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == subject_url %}active{% endif %}"
+                                href="{{ subject_url }}">
+                                Quản lý năm học
+                            </a>
+                        </li>
+                        {% endif %}
+                        {# ------ Quản lý quy định------ #}
+                        {% if request.session.role == "admin" %}
+                        {% url 'rules_list_get_view' as subject_url %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == subject_url %}active{% endif %}"
+                                href="{{ subject_url }}">
+                                Quản lý quy định
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {# ------ Quản lý Điểm------ #}
+                        {% if request.session.role == "teacher" %}
+                        {% url 'teacher_class_list' as subject_url %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == subject_url %}active{% endif %}"
+                                href="{{ subject_url }}">
+                                Quản lý Điểm
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {# ------ Thống kê------ #}
+                        {% if request.session.role == "admin" %}
+                        {% url 'class_score_report' as subject_url %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == subject_url %}active{% endif %}"
+                                href="{{ subject_url }}">
+                                Thống kê
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        
                     </ul>
+                    {% endif %}
 
                     {% if request.session.username %}
                     <div class="dropdown ms-auto">
-                        <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                        <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle"
+                            data-bs-toggle="dropdown">
                             <img src="https://ui-avatars.com/api/?name={{ request.session.username }}&background=0D8ABC&color=fff"
                                 alt="avatar" width="32" height="32" class="rounded-circle me-2">
                             <strong>{{ request.session.username }}</strong>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{% url 'profile' %}">👤 Hồ sơ cá nhân</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">🚪 Đăng xuất</a></li>
                         </ul>
                     </div>
@@ -87,27 +147,27 @@
             </div>
 
             {% if messages %}
-              <div class="container mt-4">
+            <div class="container mt-4">
                 {% for message in messages %}
-                  <div class="alert alert-{{ message.tags }} d-flex align-items-center shadow-sm border-0 rounded-3 p-3 mb-3 fade show"
-                       role="alert">
+                <div class="alert alert-{{ message.tags }} d-flex align-items-center shadow-sm border-0 rounded-3 p-3 mb-3 fade show"
+                    role="alert">
                     <i class="bi bi-info-circle-fill me-2 fs-5 text-{{ message.tags }}"></i>
                     <div>{{ message }}</div>
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                  </div>
+                </div>
                 {% endfor %}
-              </div>
+            </div>
             {% endif %}
 
             {% block content %}{% endblock %}
         </div>
     </main>
-    
+
     <!-- Footer -->
     <footer fragment="footer" class="mt-auto bg-secondary bg-gradient text-white text-center py-3">
         <p class="mb-0">&copy; 2025 - Hệ thống Quản lý học sinh | Giảng Viên</p>
     </footer>
-
     {% block extra_js %}{% endblock %}
 </body>
+
 </html>

@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block title %}Xem quy định{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/base_effects.css' %}">
+{% endblock %}
 
 {% block content %}
 <div class="card shadow-sm">

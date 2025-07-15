@@ -44,6 +44,7 @@ urlpatterns = [
     path("attendance/camera/", camera_attendance, name="camera_attendance"),
     path("attendance/mark/",  mark_attendance,  name="mark_attendance"),
     path("attendance/management", attendance_management, name="attendance_management"),
+    path("attendance/students", save_attendance, name="save_attendance"),
     # url QLHS
     path("home/", student_list, name="home"),
     path("student_list/", student_list, name="student_list"),

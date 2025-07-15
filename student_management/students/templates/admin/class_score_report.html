@@ -1,5 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Thống kê điểm số các lớp{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/base_effects.css' %}">
+{% endblock %}
 
 {% block content %}
 <div class="container mt-4">

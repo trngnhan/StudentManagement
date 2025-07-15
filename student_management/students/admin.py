@@ -4,7 +4,8 @@ from django.utils.safestring import mark_safe
 from django.shortcuts import get_object_or_404, redirect
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-
+from django.contrib.auth.models import Group
+from django.contrib.auth.admin import GroupAdmin
 import pickle
 import time
 
@@ -328,6 +329,12 @@ class RuleAdmin(admin.ModelAdmin):
     list_display = ("rule_name", "rule_content", "min_value", "max_value")
     search_fields = ("rule_name",)
     list_editable = ("min_value", "max_value")
+
+
+@admin.register(Group, site=admin_site)
+class CustomGroupAdmin(GroupAdmin):
+    pass
+
 
 
 # Gán tên tiếng Việt cho mỗi model

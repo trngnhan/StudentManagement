@@ -1,6 +1,10 @@
 from io import BytesIO
-
-import openpyxl
+import json
+from datetime import datetime
+from django.db.models import Exists, OuterRef
+from django.shortcuts import render
+from django.utils import timezone
+from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -14,16 +18,15 @@ from rest_framework.permissions import IsAuthenticated
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
 from students.form import *
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.core.paginator import Paginator
-from .models import *
-from .serializers import *
-from .permissions import *
+from students.models import *
+from students.serializers import *
+from students.permissions import *
 from datetime import date, datetime
 import pickle
-import time
+from datetime import time
 import cv2
 import numpy as np
 import face_recognition
@@ -37,8 +40,10 @@ from django.conf import settings
 from rest_framework import serializers
 from collections import defaultdict
 from django.db.models import Avg, Count, Q, Max
-from django.db.models import Q
 from django.db import transaction
+from functools import wraps
+
+
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -56,9 +61,35 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             data["role"] = "unknown"
 
         return data
+    
+
+# ==================== Phân Quyền =====================
+def is_admin(user):
+    return user.groups.filter(name="admin").exists()
+
+
+def is_staff(user):
+    return user.groups.filter(name="staff").exists()
+
+
+def is_teacher(user):
+    return user.groups.filter(name="teacher").exists()
+
+def role_required(*allowed_roles):
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            role = request.session.get("role")
+            print("ROLE == ",role)
+            if role in allowed_roles:
+                return view_func(request, *args, **kwargs)
+            return redirect("login")
+        return wrapper
+    return decorator
 
 #======================School Year======================
 @login_required
+@role_required("admin")
 def schoolyear_manage_view(request):
     if request.method == "POST":
         name = request.POST.get("school_year_name")
@@ -75,6 +106,7 @@ def schoolyear_manage_view(request):
 
 @login_required
 @require_GET
+@role_required("admin")
 def schoolyear_with_semesters_view(request):
     schoolyears = SchoolYear.objects.prefetch_related('semesters').all()
     data = []
@@ -89,6 +121,7 @@ def schoolyear_with_semesters_view(request):
     return JsonResponse(data, safe=False)
 
 @csrf_exempt
+@role_required("admin")
 def schoolyears_api_view(request):
     if request.method == "GET":
         schoolyears = SchoolYear.objects.all()
@@ -104,6 +137,7 @@ def schoolyears_api_view(request):
         return JsonResponse({"id": sy.id, "school_year_name": sy.school_year_name}, status=201)
 
 @csrf_exempt
+@role_required("admin")
 def schoolyear_api_detail_view(request, pk):
     try:
         sy = SchoolYear.objects.get(pk=pk)
@@ -122,6 +156,7 @@ def schoolyear_api_detail_view(request, pk):
 
 @login_required
 @require_POST
+@role_required("admin")
 def schoolyear_delete_view(request, pk):
     try:
         school_year = SchoolYear.objects.get(pk=pk)
@@ -137,6 +172,7 @@ def schoolyear_delete_view(request, pk):
     
 #======================Semester======================
 @login_required
+@role_required("admin")
 def semesters_of_schoolyear_view(request, year_id):
     school_year = get_object_or_404(SchoolYear, id=year_id)
     semesters = Semester.objects.filter(school_year=school_year)
@@ -146,6 +182,7 @@ def semesters_of_schoolyear_view(request, year_id):
     })
 
 @login_required
+@role_required("admin")
 def semester_edit_form_view(request, semester_id):
     semester = get_object_or_404(Semester, pk=semester_id)
     if request.method == "POST":
@@ -164,6 +201,7 @@ def semester_edit_form_view(request, semester_id):
 
 @login_required
 @require_POST
+@role_required("admin")
 def semester_create_view(request):
     school_year_id = request.POST.get("school_year")
     semester_type = request.POST.get("semester_type")
@@ -185,6 +223,7 @@ def semester_create_view(request):
 
 @login_required
 @require_POST
+@role_required("admin")
 def semester_update_view(request, semester_id):
     semester = get_object_or_404(Semester, pk=semester_id)
     semester_type = request.POST.get("semester_type")
@@ -201,6 +240,7 @@ def semester_update_view(request, semester_id):
 
 @login_required
 @require_POST
+@role_required("admin")
 def semester_delete_view(request, semester_id):
     semester = get_object_or_404(Semester, pk=semester_id)
     year_id = semester.school_year.id
@@ -211,6 +251,7 @@ def semester_delete_view(request, semester_id):
 #======================Subject======================
 @login_required
 @require_GET
+@role_required("admin")
 def subject_manage_view(request):
     subjects = Subject.objects.all().order_by("id")
     grades = Grade.objects.all()
@@ -223,12 +264,15 @@ def subject_manage_view(request):
 
 @login_required
 @require_POST
+@role_required("admin")
 def subject_delete_view(request, subject_id):
     subject = get_object_or_404(Subject, id=subject_id)
     subject.delete()
     messages.success(request, "Đã xoá môn học.")
     return redirect("subject_manage_view")
 
+@login_required
+@role_required("admin")
 def edit_subject_view(request, subject_id):
     subject = get_object_or_404(Subject, id=subject_id)
 
@@ -246,6 +290,7 @@ def edit_subject_view(request, subject_id):
 
 @login_required
 @require_POST
+@role_required("admin")
 def subject_add_view(request):
     subject_name = request.POST.get("subject_name")
     if not subject_name:
@@ -260,6 +305,7 @@ def subject_add_view(request):
 
 @login_required
 @require_GET
+@role_required("admin")
 def subject_search_view(request):
     q = request.GET.get("q", "").strip()
     subjects = Subject.objects.filter(subject_name__icontains=q) if q else Subject.objects.all()
@@ -268,12 +314,14 @@ def subject_search_view(request):
 #======================Curiculum======================
 @login_required
 @require_GET
+@role_required("admin")
 def curriculum_list_view(request):
     curriculums = Curriculum.objects.select_related('grade', 'subject').all()
     return render(request, "admin/curriculum_list.html", {"curriculums": curriculums})
 
 @login_required
 @require_POST
+@role_required("admin")
 def curriculum_add_view(request):
     grade_id = request.POST.get("grade_id")
     subject_id = request.POST.get("subject_id")
@@ -302,6 +350,7 @@ def curriculum_add_view(request):
 
 @login_required
 @require_GET
+@role_required("admin")
 def curriculum_add_form_view(request):
     grades = Grade.objects.all()
     subjects = Subject.objects.all()
@@ -309,6 +358,7 @@ def curriculum_add_form_view(request):
 
 @login_required
 @require_GET
+@role_required("admin")
 def curriculum_list_view(request):
     curriculums = Curriculum.objects.select_related('grade', 'subject').all()
     return render(request, "admin/curriculum_list.html", {"curriculums": curriculums})
@@ -316,6 +366,7 @@ def curriculum_list_view(request):
 #======================Rule======================
 @login_required
 @require_GET
+@role_required("admin")
 def rules_list_get_view(request):
     role = request.session.get("role")
     if not role:
@@ -335,6 +386,7 @@ def rules_list_get_view(request):
 
 @login_required
 @require_POST
+@role_required("admin")
 def rules_list_post_view(request):
     for rule in Rule.objects.all():
         min_value = request.POST.get(f"min_value_{rule.id}")
@@ -351,6 +403,7 @@ def rules_list_post_view(request):
     return redirect("rules_list_get_view")
 
 @login_required
+@role_required("admin")
 def admin_dashboard(request):
     if request.session.get("role") != "admin":
         return redirect('login')
@@ -367,15 +420,11 @@ def admin_dashboard(request):
         **data
     })
 
+@role_required("staff")
+@login_required
 def camera_attendance(request):
     return render(request, "attendance/camera_attendance.html")
 
-
-def students(request):
-    if not request.session.get('access'):
-        return redirect('login')
-    
-    return render(request, "teacher/student.html")
 
 @csrf_exempt
 def mark_attendance(request):
@@ -433,37 +482,29 @@ def login_view(request):
         username = request.POST.get("username")
         password = request.POST.get("password")
 
-        # Xác thực user bằng Django
         user = authenticate(request, username=username, password=password)
         if user is not None:
-            login(request, user)  # Đăng nhập user vào Django
+            login(request, user)
 
-            # Lấy role từ user (tùy model, ví dụ nếu có trường role hoặc dùng các info như bạn đã làm)
-            if hasattr(user, 'admin_info'):
-                role = 'admin'
-            elif hasattr(user, 'teacher_info'):
-                role = 'teacher'
-            elif hasattr(user, 'student_info'):
-                role = 'student'
-            else:
-                role = 'unknown'
+            # Lấy tên role từ enum
+            role_name = Role(user.role).label.lower()  # Ví dụ: "Admin" → "admin"
 
-            # Lưu thông tin vào session nếu cần
+            # Lưu vào session
             request.session['username'] = user.username
-            request.session['role'] = role
+            request.session['role'] = role_name
 
-            # Chuyển hướng theo quyền
-            if role == 'admin':
+            # Chuyển hướng theo role
+            if role_name == 'admin':
                 return redirect('admin_dashboard')
-            elif role == 'teacher':
+            elif role_name == 'teacher':
                 return redirect('teacher_class_list')
-            elif role == 'student':
+            elif role_name == 'student':
                 return redirect('student_dashboard')
+            elif role_name == 'staff':
+                return redirect('student_list')
             else:
                 return redirect('/')
 
-        # Nếu dùng JWT cho API, bạn có thể gọi API lấy token ở đây nếu cần
-        # Nếu xác thực thất bại
         return render(request, "login.html", {"error": "Sai tên đăng nhập hoặc mật khẩu."})
 
     return render(request, "login.html")
@@ -473,8 +514,6 @@ def logout_view(request):
     return redirect('login')
 
 #======================Profile======================
-from students.models import User
-
 @login_required
 def profile_view(request):
     user = request.user
@@ -507,68 +546,57 @@ def profile_view(request):
 
 #======================Student======================
 @login_required
-def student_create(request):
-    if request.method == "POST":
-        s_form = StudentForm(request.POST, request.FILES)
-        p_form = ParentForm(request.POST)
-        if s_form.is_valid() and p_form.is_valid():
-            student = s_form.save()           
-            parent  = p_form.save(commit=False)
-            parent.student = student       
-            parent.save()   
-            messages.success(request, "Đã tạo Học sinh thành công!")
-            return redirect("student_list")
-    else:
-        s_form = StudentForm()
-        p_form = ParentForm()
-
-    return render(request, "students/student_form.html",
-                  {"s_form": s_form, "p_form": p_form})
-
-
+@role_required("admin", "staff")
 def student_list(request):
     students = StudentInfo.objects.all()
-    print(students)
     return render(request, "students/student_list.html", {"students": students})
 
 # Thêm mới học sinh
+@login_required
+@role_required("admin", "staff")
 def student_create(request):
-    if request.method == "POST":
-        form = StudentForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Đã thêm học sinh thành công.")
-            return redirect("student_list")
-    else:
-        form = StudentForm()
-    return render(request, "students/student_form.html", {"form": form})
+    if request.user.role == "staff" or request.user.role == "admin":
+        if request.method == "POST":
+            form = StudentForm(request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Đã thêm học sinh thành công.")
+                return redirect("student_list")
+        else:
+            form = StudentForm()
+        return render(request, "students/student_form.html", {"form": form})
 
 # Sửa học sinh
+@login_required
+@role_required("admin", "staff")
 def student_update(request, pk):
-    student = get_object_or_404(StudentInfo, pk=pk)
-    if request.method == "POST":
-        form = StudentForm(request.POST, instance=student)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Đã cập nhật học sinh.")
-            return redirect("student_list")
-    else:
-        form = StudentForm(instance=student)
-    return render(request, "students/student_form.html", {"form": form})
+    if request.user.role == "staff" or request.user.role == "admin":
+        student = get_object_or_404(StudentInfo, pk=pk)
+        if request.method == "POST":
+            form = StudentForm(request.POST, instance=student)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Đã cập nhật học sinh.")
+                return redirect("student_list")
+        else:
+            form = StudentForm(instance=student)
+        return render(request, "students/student_form.html", {"form": form})
 
 # Xoá học sinh
+@login_required
+@role_required("admin", "staff")
 def student_delete(request, pk):
-    student = get_object_or_404(StudentInfo, pk=pk)
-    if request.method == "POST":
-        student.delete()
-        messages.success(request, "Đã xoá học sinh.")
-        return redirect("student_list")
-    return render(request, "students/student_confirm_delete.html", {"student": student})
+    if request.user.role == "staff" or request.user.role == "admin":
+        student = get_object_or_404(StudentInfo, pk=pk)
+        if request.method == "POST":
+            student.delete()
+            messages.success(request, "Đã xoá học sinh.")
+            return redirect("student_list")
+        return render(request, "students/student_confirm_delete.html", {"student": student})
 
+@login_required
+@role_required("teacher")
 def teacher_class_list_view(request):
-    if request.session.get("role") != "teacher":
-        return redirect("login")
-
     teacher = get_object_or_404(TeacherInfo, user__username=request.session.get("username"))
 
     class_ids = Transcript.objects.filter(teacher_info=teacher).values_list("classroom_id", flat=True).distinct()
@@ -579,10 +607,9 @@ def teacher_class_list_view(request):
     })
 
 #======================Teacher======================
+@login_required
+@role_required("teacher", "admin")
 def teacher_subject_scores_view(request, classroom_id):
-    if request.session.get("role") != "teacher":
-        return redirect("login")
-
     teacher = get_object_or_404(TeacherInfo, user__username=request.session.get("username"))
     classroom = get_object_or_404(Classroom, id=classroom_id)
 
@@ -599,10 +626,10 @@ def teacher_subject_scores_view(request, classroom_id):
         "subjects": subjects,
     })
 
-def teacher_score_detail_view(request, transcript_id):
-    if request.session.get("role") != "teacher":
-        return redirect("login")
 
+@login_required
+@role_required("teacher", "admin")
+def teacher_score_detail_view(request, transcript_id):
     transcript = get_object_or_404(Transcript, id=transcript_id)
 
     # === POST xử lý lưu hoặc thêm điểm ===
@@ -705,10 +732,9 @@ def teacher_score_detail_view(request, transcript_id):
     })
 
 #======================Classroom======================
+@login_required
+@role_required("admin")
 def class_score_report_view(request):
-    if request.session.get("role") != "admin":
-        return redirect("login")
-
     classes = Classroom.objects.all().order_by("classroom_name")
     report = []
 
@@ -738,6 +764,9 @@ def class_score_report_view(request):
         "report": report,
     })
 
+# =========== Nhân Viên ==============
+@login_required
+@role_required("staff", "admin")
 def search_student_list(request):
     q = request.GET.get('q', '').strip()
     students = StudentInfo.objects.all()
@@ -762,7 +791,8 @@ def search_student_list(request):
     context = {"students": students, "q": q}
     return render(request, "students\student_list.html", context)
 
-
+@login_required
+@role_required("staff", "admin")
 def classroom_create(request):
     if request.method == "POST":
         form = ClassroomForm(request.POST)
@@ -776,7 +806,8 @@ def classroom_create(request):
         form = ClassroomForm()
     return render(request, "classroom\create.html", {"form": form})
 
-
+@login_required
+@role_required("staff", "admin")
 def add_student_to_classroom(request, pk):
     classroom = get_object_or_404(Classroom, pk=pk)
     if request.method == "POST":
@@ -800,6 +831,8 @@ def add_student_to_classroom(request, pk):
     return render(request, "classroom/add_student.html", {"form": form, "classroom": classroom})
 
 
+@login_required
+@role_required("staff", "admin")
 @transaction.atomic
 def transfer_student(request):
     if request.method == "POST":
@@ -827,7 +860,8 @@ def transfer_student(request):
         form = TransferStudentForm()
     return render(request, "classroom/transfer.html", {"form": form})
 
-
+@login_required
+@role_required("staff", "admin")
 def class_management(request):
     classes = Classroom.objects.select_related("grade").order_by("grade__grade_type", "classroom_name")
 
@@ -857,6 +891,8 @@ def class_management(request):
     return render(request, "classroom/class_management.html", context)
 
 
+@login_required
+@role_required("staff", "admin")
 def classroom_add_students_bulk(request):
     if request.method == "POST":
         class_id = request.POST.get("class_id")
@@ -882,6 +918,9 @@ def classroom_add_students_bulk(request):
             messages.warning(request, "Không có học sinh nào được thêm.")
     return redirect("classroom_management")
 
+
+@login_required
+@role_required("staff", "admin")
 def classroom_update(request, pk):
     classroom = get_object_or_404(Classroom, pk=pk)
     if request.method == "POST":
@@ -897,6 +936,8 @@ def classroom_update(request, pk):
                   {"form": form, "classroom": classroom})
 
 
+@login_required
+@role_required("staff", "admin")
 def classroom_delete(request, pk):
     classroom = get_object_or_404(Classroom, pk=pk)
     if request.method == "POST":
@@ -908,6 +949,9 @@ def classroom_delete(request, pk):
                   {"classroom": classroom})
 
 
+
+@login_required
+@role_required("staff", "admin")
 def classroom_transfer_students_bulk(request):
     if request.method == "POST":
         # Lớp nguồn & lớp đích
@@ -960,16 +1004,8 @@ def classroom_transfer_students_bulk(request):
     return redirect("classroom_management")
 
 
-# views.py
-import json
-from datetime import datetime
-from django.db.models import Exists, OuterRef
-from django.shortcuts import render
-from django.utils import timezone
-
-from .models import Classroom, StudentInfo, Attendance
-
-
+@login_required
+@role_required("staff", "admin")
 def attendance_management(request):
     # 1. Ngày cần kiểm tra
     date_param = request.GET.get("date")         
@@ -1017,3 +1053,35 @@ def attendance_management(request):
         "students_by_class": students_json_by_class
     }
     return render(request, "attendance/attendance_management.html", context)
+
+
+@login_required
+@role_required("staff", "admin")
+@require_POST
+@transaction.atomic
+def save_attendance(request):
+    class_id   = request.POST.get('class_id')
+    date_str   = request.POST.get('date')
+    attended   = request.POST.getlist('attended')
+
+    classroom  = get_object_or_404(Classroom, pk=class_id)
+    try:
+        date_obj = timezone.datetime.strptime(date_str, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        messages.error(request, "Ngày không hợp lệ.")
+        return redirect(request.META.get("HTTP_REFERER", "/"))
+
+    students_in_class = [ s for s in StudentInfo.objects.all() if s.get_current_classroom() == classroom]
+    now_time = timezone.localtime().time()
+
+    for student in students_in_class:
+        if str(student.id) in attended:
+            is_late = now_time > time(7, 30)
+            Attendance.objects.update_or_create(
+                student=student,
+                date=date_obj,
+                defaults={"time_checked": now_time, "is_late": is_late},
+            )
+
+    messages.success(request, "Lưu điểm danh thành công.")
+    return redirect("attendance_management")

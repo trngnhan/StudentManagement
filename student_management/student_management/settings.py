@@ -50,7 +50,7 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'students.User'
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/student_list'
 
 #Chung thuc user
 REST_FRAMEWORK = {
@@ -164,7 +164,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Bangkok'
 
 USE_I18N = True
 
@@ -180,3 +180,31 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Celery
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/1"
+CELERY_TIMEZONE = "Asia/Bangkok"
+CELERY_ENABLE_UTC = False
+
+from celery.schedules import crontab
+from datetime import timedelta
+
+CELERY_BEAT_SCHEDULE = {
+    "notify_absent_students": {
+        "task": "students.tasks.notify_absent_students",
+        "schedule": crontab(hour=7, minute=35),
+        # "schedule": timedelta(seconds=60),
+    },
+}
+
+# Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'trinhquocdat041004@gmail.com'
+EMAIL_HOST_PASSWORD = 'vfattdqqgyrxfxpj'
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
