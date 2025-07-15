@@ -749,34 +749,79 @@ def teacher_score_detail_view(request, transcript_id):
 @login_required
 @role_required("admin")
 def class_score_report_view(request):
-    classes = Classroom.objects.all().order_by("classroom_name")
-    report = []
+    school_years = SchoolYear.objects.all()
+    subjects = Subject.objects.all()
 
-    for classroom in classes:
-        # Lấy học sinh đang thuộc lớp này (giả sử transfer mới nhất là lớp hiện tại)
-        latest_transfers = ClassroomTransfer.objects.filter(classroom=classroom).values('student_info').annotate(
-            latest_id=Max('id')
+    # Lấy dữ liệu filter từ query params
+    selected_subject = request.GET.get("subject")
+    selected_year = request.GET.get("school_year")
+    selected_semester = request.GET.get("semester")
+
+    classrooms = Classroom.objects.all()
+    if selected_year:
+        classrooms = classrooms.filter(grade__school_year__school_year_name=selected_year)
+
+    report_data = {
+        'classes': [],
+        'student_counts': [],
+        'class_averages': [],
+        'subjects_data': {}
+    }
+
+    # --- Tổng hợp điểm trung bình và số học sinh ---
+    print(f"Processing {classrooms.count()} classrooms")
+    
+    for classroom in classrooms:
+        transcripts = Transcript.objects.filter(classroom=classroom)
+        if selected_semester:
+            transcripts = transcripts.filter(semester__semester_type=selected_semester)
+
+        scores = Score.objects.filter(
+            transcript__in=transcripts,
+            score_number__isnull=False
         )
-        latest_transfer_ids = [item['latest_id'] for item in latest_transfers]
-        students = StudentInfo.objects.filter(classroom_transfers__id__in=latest_transfer_ids).distinct()
-        student_count = students.count()
 
-        # Tính điểm trung bình từng học sinh
-        student_scores = []
-        for student in students:
-            avg_score = Score.objects.filter(student_info=student).aggregate(avg=Avg("score_number"))["avg"]
-            student_scores.append(avg_score if avg_score is not None else 0)
-        class_avg = sum(student_scores) / student_count if student_count > 0 else 0
+        student_count = ClassroomTransfer.objects.filter(
+            classroom=classroom
+        ).values("student_info").distinct().count()
 
-        report.append({
-            "classroom": classroom,
-            "student_count": student_count,
-            "class_avg": round(class_avg, 2),
-        })
+        avg_score = scores.aggregate(avg=Avg("score_number"))["avg"] or 0
 
-    return render(request, "admin/class_score_report.html", {
-        "report": report,
-    })
+        # Thêm năm học vào tên lớp để phân biệt
+        school_year = classroom.grade.school_year.school_year_name
+        label = f"{classroom.classroom_name} ({school_year})"
+        print(f"Classroom: {label}, Students: {student_count}, Avg: {avg_score}")
+        
+        report_data["classes"].append(label)
+        report_data["student_counts"].append(student_count)
+        report_data["class_averages"].append(round(avg_score, 2))
+
+    # --- Điểm từng môn học ---
+    for subject in subjects:
+        subject_scores = {}
+        for classroom in classrooms:
+            scores = Score.objects.filter(
+                transcript__classroom=classroom,
+                transcript__curriculum__subject=subject,
+                score_number__isnull=False
+            )
+            if selected_semester:
+                scores = scores.filter(transcript__semester__semester_type=selected_semester)
+            if selected_year:
+                scores = scores.filter(transcript__classroom__grade__school_year__school_year_name=selected_year)
+
+            school_year = classroom.grade.school_year.school_year_name
+            label = f"{classroom.classroom_name} ({school_year})"
+            avg = scores.aggregate(avg=Avg("score_number"))["avg"]
+            subject_scores[label] = round(avg or 0, 2)
+        report_data["subjects_data"][subject.subject_name] = subject_scores
+
+    context = {
+        "report_data": report_data,
+        "school_years": school_years,
+        "subjects": subjects,
+    }
+    return render(request, "admin/class_score_report.html", context)
 
 # =========== Nhân Viên ==============
 @login_required
