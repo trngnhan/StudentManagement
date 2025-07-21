@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Xem điểm theo học kỳ{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center text-primary">Xem điểm của {{ student.name }}</h2>
+
+    <!-- Form chọn năm học và học kỳ -->
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-md-5">
+            <label for="school_year" class="form-label">Năm học</label>
+            <select name="school_year" id="school_year" class="form-select">
+                <option value="">-- Chọn năm học --</option>
+                {% for sy in school_years %}
+                    <option value="{{ sy.id }}" {% if sy.id == selected_school_year_id %}selected{% endif %}>
+                        {{ sy.school_year_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label for="semester" class="form-label">Học kỳ</label>
+            <select name="semester" id="semester" class="form-select">
+                <option value="">-- Chọn học kỳ --</option>
+                {% for s in semesters %}
+                    <option value="{{ s.id }}" {% if s.id == selected_semester_id %}selected{% endif %}>
+                        {{ s.get_semester_type_display }} ({{ s.school_year.school_year_name }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Xem điểm</button>
+        </div>
+    </form>
+
+    {% if score_groups %}
+        {% for group in score_groups %}
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    Môn: {{ group.subject }} | Lớp: {{ group.classroom }} | Giáo viên: {{ group.teacher }} | Học kỳ: {{ group.semester }}
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Loại điểm</th>
+                                <th>Điểm số</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for score in group.scores %}
+                                <tr>
+                                    <td>{{ score.get_score_type_display }}</td>
+                                    <td>{{ score.score_number }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="2">Chưa có điểm.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <p><strong>Điểm trung bình:</strong>
+                        {% if group.average %} {{ group.average }} {% else %} Chưa có {% endif %}
+                    </p>
+                </div>
+            </div>
+        {% endfor %}
+    {% elif selected_school_year_id and selected_semester_id %}
+        <p class="text-center text-danger">Không tìm thấy bảng điểm nào trong học kỳ này.</p>
+    {% endif %}
+</div>
+{% endblock %}

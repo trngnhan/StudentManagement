@@ -52,6 +52,8 @@ urlpatterns = [
     path("student/<int:pk>/edit/", student_update, name="student_update"),
     path("student/<int:pk>/delete/", student_delete, name="student_delete"),
     path("search_student", search_student_list, name="search_student"),
+    path("student/dashboard/", student_dashboard_view, name="student_dashboard"),
+    path("student/scores/", student_view_scores, name="student_view_scores"),
     # url QLLH
     path('curriculums/', curriculum_list_view, name='curriculum_list_view'),
     path('curriculums/add/', curriculum_add_form_view, name='curriculum_add_form_view'),

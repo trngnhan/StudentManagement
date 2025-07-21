@@ -42,8 +42,7 @@ from collections import defaultdict
 from django.db.models import Avg, Count, Q, Max
 from django.db import transaction
 from functools import wraps
-
-
+from django.db.models import Avg
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -1144,3 +1143,61 @@ def save_attendance(request):
 
     messages.success(request, "Lưu điểm danh thành công.")
     return redirect("attendance_management")
+
+@login_required
+@role_required("student")
+def student_dashboard_view(request):
+    student = get_object_or_404(StudentInfo, user=request.user)
+
+    return render(request, "students/student_dashboard.html", {
+        "student": student
+    })
+
+@login_required
+@role_required("student")
+def student_view_scores(request):
+    student = get_object_or_404(StudentInfo, user=request.user)
+
+    # Lấy danh sách năm học & học kỳ để hiển thị form
+    school_years = SchoolYear.objects.all()
+    semesters = Semester.objects.select_related('school_year')
+
+    # Lấy giá trị được chọn từ form (nếu có)
+    selected_school_year_id = request.GET.get("school_year")
+    selected_semester_id = request.GET.get("semester")
+
+    scores_by_transcript = []
+
+    if selected_school_year_id and selected_semester_id:
+        transcripts = Transcript.objects.filter(
+            scores__student_info=student,
+            semester_id=selected_semester_id,
+            semester__school_year_id=selected_school_year_id
+        ).select_related(
+            'curriculum__subject',
+            'semester__school_year',
+            'classroom',
+            'teacher_info'
+        ).distinct()
+
+        for tr in transcripts:
+            scores = Score.objects.filter(transcript=tr, student_info=student).order_by("score_type")
+            average = scores.aggregate(avg=Avg("score_number"))["avg"]
+
+            scores_by_transcript.append({
+                "subject": tr.curriculum.subject.subject_name,
+                "teacher": tr.teacher_info.name if tr.teacher_info else "N/A",
+                "semester": tr.semester.get_semester_type_display(),
+                "classroom": tr.classroom.classroom_name,
+                "scores": scores,
+                "average": round(average, 2) if average is not None else None,
+            })
+
+    return render(request, "students/student_scores.html", {
+        "student": student,
+        "school_years": school_years,
+        "semesters": semesters,
+        "score_groups": scores_by_transcript,
+        "selected_school_year_id": int(selected_school_year_id) if selected_school_year_id else None,
+        "selected_semester_id": int(selected_semester_id) if selected_semester_id else None,
+    })
