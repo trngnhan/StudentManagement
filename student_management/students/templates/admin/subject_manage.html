@@ -9,17 +9,17 @@
 
 {% block content %}
 <div class="container mt-3">
-  <h2 class="text-center text-primary fw-bold">📘 Quản lý Môn học</h2>
+  <h2 class="text-center text-primary fw-bold">Quản lý Môn học</h2>
 </div>
 
 <div id="subjectMessage" class="alert d-none"></div>
 
 <ul class="nav nav-tabs mt-4" id="mainTab" role="tablist">
   <li class="nav-item">
-    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#subject">📚 Danh sách môn học</button>
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#subject">Danh sách môn học</button>
   </li>
   <li class="nav-item">
-    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#curriculum">📋 Chương trình học</button>
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#curriculum">Chương trình học</button>
   </li>
 </ul>
 
@@ -27,7 +27,7 @@
   <!-- Tab 1: Môn học -->
   <div class="tab-pane fade show active" id="subject">
     <div class="mb-3">
-      <input type="text" id="subjectSearch" class="form-control" placeholder="🔍 Tìm môn học...">
+      <input type="text" id="subjectSearch" class="form-control" placeholder="Tìm môn học...">
     </div>
 
     <form method="post" action="{% url 'subject_add_view' %}" class="row g-2 mb-4">
@@ -36,7 +36,7 @@
         <input type="text" name="subject_name" class="form-control" placeholder="Nhập tên môn học" required>
       </div>
       <div class="col-md-3 text-end">
-        <button type="submit" class="btn btn-success w-100">➕ Thêm</button>
+        <button type="submit" class="btn btn-success w-100">Thêm</button>
       </div>
     </form>
 
@@ -54,10 +54,10 @@
           <td>{{ subject.id }}</td>
           <td>{{ subject.subject_name }}</td>
           <td class="text-center">
-            <a href="{% url 'subject_edit_view' subject.id %}" class="btn btn-sm btn-warning">✏️ Sửa</a>
+            <a href="{% url 'subject_edit_view' subject.id %}" class="btn btn-sm btn-warning">Sửa</a>
             <form method="post" action="{% url 'subject_delete_view' subject.id %}" style="display:inline;">
               {% csrf_token %}
-              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Xác nhận xoá môn học này?')">🗑️ Xoá</button>
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Xác nhận xoá môn học này?')">Xoá</button>
             </form>
           </td>
         </tr>
@@ -70,7 +70,7 @@
 
   <!-- Tab 2: Chương trình học -->
   <div class="tab-pane fade" id="curriculum">
-    <h4>🧩 Thêm môn học vào chương trình</h4>
+    <h4>Thêm môn học vào chương trình</h4>
     <div id="curriculumMessage" class="alert d-none"></div>
     <form method="post" action="{% url 'curriculum_add_view' %}" class="row g-3 mt-2">
       {% csrf_token %}
@@ -78,7 +78,7 @@
         <label for="gradeSelect" class="form-label">Chọn khối</label>
         <select name="grade_id" id="gradeSelect" class="form-select" required>
           {% for grade in grades %}
-            <option value="{{ grade.id }}">{{ grade.grade_type_display }} - {{ grade.school_year.school_year_name }}</option>
+            <option value="{{ grade.id }}">{{ grade.grade_type_display }} {{ grade.school_year.school_year_name }}</option>
           {% endfor %}
         </select>
       </div>
@@ -91,12 +91,12 @@
         </select>
       </div>
       <div class="col-12 text-end">
-        <button type="submit" class="btn btn-success mt-2">➕ Thêm vào chương trình</button>
+        <button type="submit" class="btn btn-success mt-2">Thêm vào chương trình</button>
       </div>
     </form>
 
     <hr class="my-4">
-    <h4>📋 Danh sách môn học theo khối</h4>
+    <h4>Danh sách môn học theo khối</h4>
     <table class="table table-bordered">
       <thead>
         <tr>
@@ -107,7 +107,7 @@
       <tbody>
         {% for curriculum in curriculums %}
         <tr>
-          <td>{{ curriculum.grade.grade_type_display }} - {{ curriculum.grade.school_year.school_year_name }}</td>
+          <td>{{ curriculum.grade.grade_type_display }} {{ curriculum.grade.school_year.school_year_name }}</td>
           <td>{{ curriculum.subject.subject_name }}</td>
         </tr>
         {% empty %}

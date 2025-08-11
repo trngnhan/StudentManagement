@@ -26,7 +26,6 @@ urlpatterns = [
     path('schoolyear_manage/', schoolyear_manage_view, name='schoolyear_manage_view'),
     path('schoolyear/with-semesters/', schoolyear_with_semesters_view, name='schoolyear_with_semesters_view'),
     path('school-years/', schoolyears_api_view, name='schoolyears_api_view'),
-    path('school-years/<int:pk>/', schoolyear_api_detail_view, name='schoolyear_api_detail_view'),
     path('schoolyear/delete/<int:pk>/', schoolyear_delete_view, name='schoolyear_delete_view'),
     path('schoolyear/<int:year_id>/semesters/', semesters_of_schoolyear_view, name='semesters_of_schoolyear_view'),
     path('semester/create/', semester_create_view, name='semester_create_view'),

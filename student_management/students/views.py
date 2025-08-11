@@ -43,6 +43,7 @@ from django.db.models import Avg, Count, Q, Max
 from django.db import transaction
 from functools import wraps
 from django.db.models import Avg
+from django.utils.text import slugify
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -134,24 +135,6 @@ def schoolyears_api_view(request):
             return JsonResponse({"detail": "Thiếu tên năm học."}, status=400)
         sy = SchoolYear.objects.create(school_year_name=name)
         return JsonResponse({"id": sy.id, "school_year_name": sy.school_year_name}, status=201)
-
-@csrf_exempt
-@role_required("admin")
-def schoolyear_api_detail_view(request, pk):
-    try:
-        sy = SchoolYear.objects.get(pk=pk)
-    except SchoolYear.DoesNotExist:
-        return JsonResponse({"detail": "Không tìm thấy năm học."}, status=404)
-    if request.method == "DELETE":
-        try:
-            sy.delete()
-            return JsonResponse({"message": "Đã xoá năm học."}, status=204)
-        except RestrictedError:
-            return JsonResponse(
-                {"detail": "Không thể xoá năm học vì còn học kỳ liên kết. Vui lòng xoá học kỳ trước."},
-                status=400
-            )
-        
 
 @login_required
 @require_POST
@@ -254,6 +237,7 @@ def semester_delete_view(request, semester_id):
 def subject_manage_view(request):
     subjects = Subject.objects.all().order_by("id")
     grades = Grade.objects.all()
+    #Thực hiện kết bảng related
     curriculums = Curriculum.objects.select_related('grade', 'subject').all()
     return render(request, "admin/subject_manage.html", {
         "subjects": subjects,
@@ -305,6 +289,7 @@ def subject_add_view(request):
 @login_required
 @require_GET
 @role_required("admin")
+#Tìm theo từng kí tự khi tìm kiếm
 def subject_search_view(request):
     q = request.GET.get("q", "").strip()
     subjects = Subject.objects.filter(subject_name__icontains=q) if q else Subject.objects.all()
@@ -423,7 +408,6 @@ def admin_dashboard(request):
 @login_required
 def camera_attendance(request):
     return render(request, "attendance/camera_attendance.html")
-
 
 @csrf_exempt
 def mark_attendance(request):
@@ -639,7 +623,6 @@ def teacher_subject_scores_view(request, classroom_id):
         "subjects": subjects,
     })
 
-
 @login_required
 @role_required("teacher", "admin")
 def teacher_score_detail_view(request, transcript_id):
@@ -662,8 +645,17 @@ def teacher_score_detail_view(request, transcript_id):
             wb.save(buffer)
             buffer.seek(0)
 
-            response = HttpResponse(buffer.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            response['Content-Disposition'] = f'attachment; filename=bang_diem_{transcript.classroom.classroom_name}.xlsx'
+            # --- Lấy tên môn và tên lớp ---
+            subject_name_slug = slugify(transcript.curriculum.subject.subject_name)
+            class_name_slug = slugify(transcript.classroom.classroom_name)
+
+            response = HttpResponse(
+                buffer.read(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = (
+                f'attachment; filename=bang_diem_mon_{subject_name_slug}_lop_{class_name_slug}.xlsx'
+            )
             return response
 
         # === Lưu điểm đã chỉnh sửa ===
@@ -743,6 +735,7 @@ def teacher_score_detail_view(request, transcript_id):
         "transcript": transcript,
         "grouped_scores": list(grouped_scores.values()),
     })
+
 
 #======================Classroom======================
 @login_required
