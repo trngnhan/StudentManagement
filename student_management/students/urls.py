@@ -26,7 +26,6 @@ urlpatterns = [
     path('schoolyear_manage/', schoolyear_manage_view, name='schoolyear_manage_view'),
     path('schoolyear/with-semesters/', schoolyear_with_semesters_view, name='schoolyear_with_semesters_view'),
     path('school-years/', schoolyears_api_view, name='schoolyears_api_view'),
-    path('school-years/<int:pk>/', schoolyear_api_detail_view, name='schoolyear_api_detail_view'),
     path('schoolyear/delete/<int:pk>/', schoolyear_delete_view, name='schoolyear_delete_view'),
     path('schoolyear/<int:year_id>/semesters/', semesters_of_schoolyear_view, name='semesters_of_schoolyear_view'),
     path('semester/create/', semester_create_view, name='semester_create_view'),
@@ -52,6 +51,8 @@ urlpatterns = [
     path("student/<int:pk>/edit/", student_update, name="student_update"),
     path("student/<int:pk>/delete/", student_delete, name="student_delete"),
     path("search_student", search_student_list, name="search_student"),
+    path("student/dashboard/", student_dashboard_view, name="student_dashboard"),
+    path("student/scores/", student_view_scores, name="student_view_scores"),
     # url QLLH
     path('curriculums/', curriculum_list_view, name='curriculum_list_view'),
     path('curriculums/add/', curriculum_add_form_view, name='curriculum_add_form_view'),

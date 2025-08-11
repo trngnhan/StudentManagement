@@ -8,11 +8,11 @@
 {% endblock %}
 {% block content %}
 <div class="container mt-4">
-  <h2 class="text-center text-primary fw-bold">📆 Quản lý Năm học</h2>
+  <h2 class="text-center text-primary fw-bold">Quản lý Năm học</h2>
 
   <!-- Form tạo năm học -->
   <div class="card mt-4">
-    <div class="card-header bg-primary text-white">➕ Tạo Năm học</div>
+    <div class="card-header bg-primary text-white">Tạo Năm học</div>
     <div class="card-body">
       <form method="post" action="{% url 'schoolyear_manage_view' %}" class="row g-2">
         {% csrf_token %}
@@ -28,7 +28,7 @@
 
   <!-- Danh sách năm học -->
   <div class="mt-5">
-    <h4 class="mb-3 text-primary fw-bold">📋 Danh sách Năm học</h4>
+    <h4 class="mb-3 text-primary fw-bold">Danh sách Năm học</h4>
     <div id="schoolYearList" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
       {% for sy in schoolyears %}
         <div class="col">
@@ -38,7 +38,7 @@
               <a href="{% url 'semesters_of_schoolyear_view' sy.id %}" class="btn btn-info btn-sm mt-2">Xem học kỳ</a>
               <form method="post" action="{% url 'schoolyear_delete_view' sy.id %}" style="display:inline;" onsubmit="setTimeout(function(){location.reload()}, 500);">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-danger btn-sm mt-2" onclick="return confirm('Xác nhận xoá năm học này?')">🗑️ Xoá</button>
+                <button type="submit" class="btn btn-danger btn-sm mt-2" onclick="return confirm('Xác nhận xoá năm học này?')">Xoá</button>
               </form>
             </div>
           </div>

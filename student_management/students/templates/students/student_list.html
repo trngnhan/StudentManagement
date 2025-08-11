@@ -12,7 +12,7 @@
 <form action="{% url 'search_student' %}" method="get" class="mb-4">
     <div class="input-group">
         <input type="text" name="q" value="{{ q }}" class="form-control"
-               placeholder="🔍 Mã HS hoặc tên HS">
+               placeholder="Mã HS hoặc tên HS">
         <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i> Tìm</button>
         {% if request.GET.q %}
         <div class="col-auto">
@@ -29,7 +29,7 @@
             <h3 class="mb-3 text-primary fw-bold">Danh sách học sinh</h3>
         </div>
         <div>
-            <a href="{% url 'student_create' %}" class="btn btn-success mb-3">➕ Thêm học sinh</a>
+            <a href="{% url 'student_create' %}" class="btn btn-success mb-3">Thêm học sinh</a>
         </div>
     </div>
 
@@ -56,9 +56,9 @@
                     <td>{{ s.email }}</td>
                     <td>{{ s.phone }}</td>
                     <td>
-                        <a href="{% url 'student_update' s.id %}" class="btn btn-sm btn-outline-primary me-1">✏️ Sửa</a>
+                        <a href="{% url 'student_update' s.id %}" class="btn btn-sm btn-outline-primary me-1">Sửa</a>
                         <a href="{% url 'student_delete' s.id %}" class="btn btn-sm btn-outline-danger"
-                            onclick="return confirm('Xác nhận xoá học sinh này?')">🗑️ Xoá</a>
+                            onclick="return confirm('Xác nhận xoá học sinh này?')">Xoá</a>
                     </td>
                 </tr>
                 {% empty %}

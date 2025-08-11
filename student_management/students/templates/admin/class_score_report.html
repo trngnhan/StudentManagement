@@ -1,39 +1,269 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Thống kê điểm số các lớp{% endblock %}
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/base_effects.css' %}">
-{% endblock %}
+
+{% block title %}Bảng điểm môn học{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4 text-center">Thống kê điểm số các lớp</h2>
-    <div class="row">
-        <div class="col-lg-7 col-md-12 mb-4">
-            <table class="table table-bordered table-striped shadow-sm">
-                <thead class="table-primary">
-                    <tr>
-                        <th>Lớp</th>
-                        <th>Số học sinh</th>
-                        <th>Điểm trung bình lớp</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in report %}
-                    <tr>
-                        <td>{{ item.classroom.classroom_name }}</td>
-                        <td>{{ item.student_count }}</td>
-                        <td>{{ item.class_avg }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <div class="col-lg-5 col-md-12 d-flex align-items-center justify-content-center">
-            <div style="width:100%;max-width:400px;">
-                <canvas id="scoreChart" height="300"></canvas>
-            </div>
-        </div>
+<div class="container-fluid mt-4">
+  <h2 class="text-center mb-4 text-primary fw-bold">THỐNG KÊ BÁO CÁO ĐIỂM MÔN HỌC</h2>
+
+  <!-- Filter Section -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <label class="form-label fw-bold">Môn</label>
+      <select class="form-select" id="subjectFilter">
+        <option selected>Chọn môn</option>
+        {% for subject in subjects %}
+        <option value="{{ subject.subject_name }}">{{ subject.subject_name }}</option>
+        {% endfor %}
+      </select>
     </div>
+    <div class="col-md-4">
+      <label class="form-label fw-bold">Năm học</label>
+      <select class="form-select" id="yearFilter">
+        <option selected>Chọn năm học</option>
+        {% for year in school_years %}
+        <option value="{{ year.school_year_name }}">{{ year.school_year_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label fw-bold">Học kỳ</label>
+      <select class="form-select" id="semesterFilter">
+        <option selected>Chọn học kỳ</option>
+        <option value="1">Học kỳ 1</option>
+        <option value="2">Học kỳ 2</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Action Button -->
+  <div class="text-center mb-4">
+    <button class="btn btn-primary px-4 py-2" onclick="generateReport()">
+      <i class="fas fa-chart-bar me-2"></i>XEM BÁO CÁO
+    </button>
+  </div>
+
+  <!-- Report Section -->
+  <div class="row">
+    <div class="col-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h6 class="card-title">Thông tin báo cáo</h6>
+          <div class="border p-3" style="min-height: 120px;">
+            <p class="mb-1"><strong>Môn học:</strong> <span id="selectedSubject">---</span></p>
+            <p class="mb-1"><strong>Năm học:</strong> <span id="selectedYear">---</span></p>
+            <p class="mb-1"><strong>Học kỳ:</strong> <span id="selectedSemester">---</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-9">
+      <!-- Line Chart -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">📈 Biểu đồ điểm trung bình theo lớp</h5>
+        </div>
+        <div class="card-body">
+          <canvas id="lineChart" height="300"></canvas>
+        </div>
+      </div>
+      
+      <!-- Bar Chart -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">Biểu đồ số lượng học sinh theo lớp</h5>
+        </div>
+        <div class="card-body">
+          <canvas id="barChart" height="350"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+{{ report_data|json_script:"report-data" }}
+
+<!-- ChartJS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Lấy dữ liệu từ Django
+  const reportData = JSON.parse(document.getElementById('report-data').textContent);
+  
+  // Debug: Hiển thị dữ liệu để kiểm tra
+  console.log('Report Data:', reportData);
+  
+  // Dữ liệu từ database
+  const classNames = reportData.classes;
+  const studentCounts = reportData.student_counts;
+  const classAverages = reportData.class_averages;
+  const subjectsData = reportData.subjects_data;
+
+  // Debug: Hiển thị từng phần dữ liệu
+  console.log('Class Names:', classNames);
+  console.log('Student Counts:', studentCounts);
+  console.log('Class Averages:', classAverages);
+  console.log('Subjects Data:', subjectsData);
+
+  // Màu sắc cho từng lớp
+  const colors = [
+    'rgba(54, 162, 235, 0.8)',   // Xanh dương
+    'rgba(255, 99, 132, 0.8)',   // Đỏ
+    'rgba(255, 206, 86, 0.8)',   // Vàng
+    'rgba(75, 192, 192, 0.8)',   // Xanh lá
+    'rgba(153, 102, 255, 0.8)',  // Tím
+    'rgba(255, 159, 64, 0.8)',   // Cam
+    'rgba(255, 99, 255, 0.8)',   // Hồng
+    'rgba(99, 255, 132, 0.8)',   // Xanh lá nhạt
+    'rgba(132, 99, 255, 0.8)',   // Tím nhạt
+    'rgba(255, 159, 132, 0.8)'   // Cam nhạt
+  ];
+
+  // Line Chart
+  const lineCtx = document.getElementById('lineChart').getContext('2d');
+  const lineChart = new Chart(lineCtx, {
+    type: 'line',
+    data: {
+      labels: classNames,
+      datasets: [{
+        label: 'Điểm trung bình',
+        data: classAverages,
+        borderColor: 'rgba(54, 162, 235, 1)',
+        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top'
+        },
+        title: {
+          display: true,
+          text: 'Biểu đồ điểm trung bình theo lớp',
+          font: {
+            size: 16,
+            weight: 'bold'
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} điểm`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 10,
+          ticks: {
+            stepSize: 1
+          },
+          title: {
+            display: true,
+            text: 'Điểm số'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Lớp học'
+          }
+        }
+      }
+    }
+  });
+
+  // Bar Chart
+  const barCtx = document.getElementById('barChart').getContext('2d');
+  const barChart = new Chart(barCtx, {
+    type: 'bar',
+    data: {
+      labels: classNames,
+      datasets: [{
+        label: 'Số học sinh',
+        data: studentCounts,
+        backgroundColor: colors.slice(0, classNames.length),
+        borderColor: colors.slice(0, classNames.length).map(c => c.replace('0.8', '1')),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        title: {
+          display: true,
+          text: 'Biểu đồ số lượng học sinh theo lớp',
+          font: {
+            size: 16,
+            weight: 'bold'
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `${context.dataset.label}: ${context.parsed.y} học sinh`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 5
+          },
+          title: {
+            display: true,
+            text: 'Số học sinh'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Lớp học'
+          }
+        }
+      }
+    }
+  });
+
+  // Hàm xử lý khi nhấn nút "XEM BÁO CÁO"
+  function generateReport() {
+    const subject = document.getElementById('subjectFilter').value;
+    const year = document.getElementById('yearFilter').value;
+    const semester = document.getElementById('semesterFilter').value;
+
+    // Cập nhật thông tin báo cáo
+    document.getElementById('selectedSubject').textContent = 
+      subject === 'Chọn môn' ? '---' : subject;
+    document.getElementById('selectedYear').textContent = 
+      year === 'Chọn năm học' ? '---' : year;
+    document.getElementById('selectedSemester').textContent = 
+      semester === 'Chọn học kỳ' ? '---' : `Học kỳ ${semester}`;
+
+    // Cập nhật biểu đồ line chart theo môn được chọn
+    if (subject !== 'Chọn môn' && subjectsData[subject]) {
+      const subjectScores = classNames.map(className => subjectsData[subject][className] || 0);
+      lineChart.data.datasets[0].data = subjectScores;
+      lineChart.data.datasets[0].label = `Điểm TB - ${subject}`;
+      lineChart.update();
+    } else {
+      // Hiển thị điểm trung bình tổng nếu không chọn môn cụ thể
+      lineChart.data.datasets[0].data = classAverages;
+      lineChart.data.datasets[0].label = 'Điểm trung bình tổng';
+      lineChart.update();
+    }
+  }
+</script>
 {% endblock %}

@@ -43,7 +43,8 @@ from django.db.models import Avg, Count, Q, Max
 from django.db import transaction
 from functools import wraps
 import streamlit as st
-
+from django.db.models import Avg
+from django.utils.text import slugify
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -135,24 +136,6 @@ def schoolyears_api_view(request):
             return JsonResponse({"detail": "Thiếu tên năm học."}, status=400)
         sy = SchoolYear.objects.create(school_year_name=name)
         return JsonResponse({"id": sy.id, "school_year_name": sy.school_year_name}, status=201)
-
-@csrf_exempt
-@role_required("admin")
-def schoolyear_api_detail_view(request, pk):
-    try:
-        sy = SchoolYear.objects.get(pk=pk)
-    except SchoolYear.DoesNotExist:
-        return JsonResponse({"detail": "Không tìm thấy năm học."}, status=404)
-    if request.method == "DELETE":
-        try:
-            sy.delete()
-            return JsonResponse({"message": "Đã xoá năm học."}, status=204)
-        except RestrictedError:
-            return JsonResponse(
-                {"detail": "Không thể xoá năm học vì còn học kỳ liên kết. Vui lòng xoá học kỳ trước."},
-                status=400
-            )
-        
 
 @login_required
 @require_POST
@@ -255,6 +238,7 @@ def semester_delete_view(request, semester_id):
 def subject_manage_view(request):
     subjects = Subject.objects.all().order_by("id")
     grades = Grade.objects.all()
+    #Thực hiện kết bảng related
     curriculums = Curriculum.objects.select_related('grade', 'subject').all()
     return render(request, "admin/subject_manage.html", {
         "subjects": subjects,
@@ -306,6 +290,7 @@ def subject_add_view(request):
 @login_required
 @require_GET
 @role_required("admin")
+#Tìm theo từng kí tự khi tìm kiếm
 def subject_search_view(request):
     q = request.GET.get("q", "").strip()
     subjects = Subject.objects.filter(subject_name__icontains=q) if q else Subject.objects.all()
@@ -441,6 +426,7 @@ def verify_image(image, stage):
     except Exception as e:
         st.error(f"Error verifying image at {stage}: {e}")
         return None
+
 
 @csrf_exempt
 def mark_attendance(request):
@@ -656,7 +642,6 @@ def teacher_subject_scores_view(request, classroom_id):
         "subjects": subjects,
     })
 
-
 @login_required
 @role_required("teacher", "admin")
 def teacher_score_detail_view(request, transcript_id):
@@ -679,8 +664,17 @@ def teacher_score_detail_view(request, transcript_id):
             wb.save(buffer)
             buffer.seek(0)
 
-            response = HttpResponse(buffer.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            response['Content-Disposition'] = f'attachment; filename=bang_diem_{transcript.classroom.classroom_name}.xlsx'
+            # --- Lấy tên môn và tên lớp ---
+            subject_name_slug = slugify(transcript.curriculum.subject.subject_name)
+            class_name_slug = slugify(transcript.classroom.classroom_name)
+
+            response = HttpResponse(
+                buffer.read(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = (
+                f'attachment; filename=bang_diem_mon_{subject_name_slug}_lop_{class_name_slug}.xlsx'
+            )
             return response
 
         # === Lưu điểm đã chỉnh sửa ===
@@ -761,38 +755,84 @@ def teacher_score_detail_view(request, transcript_id):
         "grouped_scores": list(grouped_scores.values()),
     })
 
+
 #======================Classroom======================
 @login_required
 @role_required("admin")
 def class_score_report_view(request):
-    classes = Classroom.objects.all().order_by("classroom_name")
-    report = []
+    school_years = SchoolYear.objects.all()
+    subjects = Subject.objects.all()
 
-    for classroom in classes:
-        # Lấy học sinh đang thuộc lớp này (giả sử transfer mới nhất là lớp hiện tại)
-        latest_transfers = ClassroomTransfer.objects.filter(classroom=classroom).values('student_info').annotate(
-            latest_id=Max('id')
+    # Lấy dữ liệu filter từ query params
+    selected_subject = request.GET.get("subject")
+    selected_year = request.GET.get("school_year")
+    selected_semester = request.GET.get("semester")
+
+    classrooms = Classroom.objects.all()
+    if selected_year:
+        classrooms = classrooms.filter(grade__school_year__school_year_name=selected_year)
+
+    report_data = {
+        'classes': [],
+        'student_counts': [],
+        'class_averages': [],
+        'subjects_data': {}
+    }
+
+    # --- Tổng hợp điểm trung bình và số học sinh ---
+    print(f"Processing {classrooms.count()} classrooms")
+    
+    for classroom in classrooms:
+        transcripts = Transcript.objects.filter(classroom=classroom)
+        if selected_semester:
+            transcripts = transcripts.filter(semester__semester_type=selected_semester)
+
+        scores = Score.objects.filter(
+            transcript__in=transcripts,
+            score_number__isnull=False
         )
-        latest_transfer_ids = [item['latest_id'] for item in latest_transfers]
-        students = StudentInfo.objects.filter(classroom_transfers__id__in=latest_transfer_ids).distinct()
-        student_count = students.count()
 
-        # Tính điểm trung bình từng học sinh
-        student_scores = []
-        for student in students:
-            avg_score = Score.objects.filter(student_info=student).aggregate(avg=Avg("score_number"))["avg"]
-            student_scores.append(avg_score if avg_score is not None else 0)
-        class_avg = sum(student_scores) / student_count if student_count > 0 else 0
+        student_count = ClassroomTransfer.objects.filter(
+            classroom=classroom
+        ).values("student_info").distinct().count()
 
-        report.append({
-            "classroom": classroom,
-            "student_count": student_count,
-            "class_avg": round(class_avg, 2),
-        })
+        avg_score = scores.aggregate(avg=Avg("score_number"))["avg"] or 0
 
-    return render(request, "admin/class_score_report.html", {
-        "report": report,
-    })
+        # Thêm năm học vào tên lớp để phân biệt
+        school_year = classroom.grade.school_year.school_year_name
+        label = f"{classroom.classroom_name} ({school_year})"
+        print(f"Classroom: {label}, Students: {student_count}, Avg: {avg_score}")
+        
+        report_data["classes"].append(label)
+        report_data["student_counts"].append(student_count)
+        report_data["class_averages"].append(round(avg_score, 2))
+
+    # --- Điểm từng môn học ---
+    for subject in subjects:
+        subject_scores = {}
+        for classroom in classrooms:
+            scores = Score.objects.filter(
+                transcript__classroom=classroom,
+                transcript__curriculum__subject=subject,
+                score_number__isnull=False
+            )
+            if selected_semester:
+                scores = scores.filter(transcript__semester__semester_type=selected_semester)
+            if selected_year:
+                scores = scores.filter(transcript__classroom__grade__school_year__school_year_name=selected_year)
+
+            school_year = classroom.grade.school_year.school_year_name
+            label = f"{classroom.classroom_name} ({school_year})"
+            avg = scores.aggregate(avg=Avg("score_number"))["avg"]
+            subject_scores[label] = round(avg or 0, 2)
+        report_data["subjects_data"][subject.subject_name] = subject_scores
+
+    context = {
+        "report_data": report_data,
+        "school_years": school_years,
+        "subjects": subjects,
+    }
+    return render(request, "admin/class_score_report.html", context)
 
 # =========== Nhân Viên ==============
 @login_required
@@ -1115,3 +1155,61 @@ def save_attendance(request):
 
     messages.success(request, "Lưu điểm danh thành công.")
     return redirect("attendance_management")
+
+@login_required
+@role_required("student")
+def student_dashboard_view(request):
+    student = get_object_or_404(StudentInfo, user=request.user)
+
+    return render(request, "students/student_dashboard.html", {
+        "student": student
+    })
+
+@login_required
+@role_required("student")
+def student_view_scores(request):
+    student = get_object_or_404(StudentInfo, user=request.user)
+
+    # Lấy danh sách năm học & học kỳ để hiển thị form
+    school_years = SchoolYear.objects.all()
+    semesters = Semester.objects.select_related('school_year')
+
+    # Lấy giá trị được chọn từ form (nếu có)
+    selected_school_year_id = request.GET.get("school_year")
+    selected_semester_id = request.GET.get("semester")
+
+    scores_by_transcript = []
+
+    if selected_school_year_id and selected_semester_id:
+        transcripts = Transcript.objects.filter(
+            scores__student_info=student,
+            semester_id=selected_semester_id,
+            semester__school_year_id=selected_school_year_id
+        ).select_related(
+            'curriculum__subject',
+            'semester__school_year',
+            'classroom',
+            'teacher_info'
+        ).distinct()
+
+        for tr in transcripts:
+            scores = Score.objects.filter(transcript=tr, student_info=student).order_by("score_type")
+            average = scores.aggregate(avg=Avg("score_number"))["avg"]
+
+            scores_by_transcript.append({
+                "subject": tr.curriculum.subject.subject_name,
+                "teacher": tr.teacher_info.name if tr.teacher_info else "N/A",
+                "semester": tr.semester.get_semester_type_display(),
+                "classroom": tr.classroom.classroom_name,
+                "scores": scores,
+                "average": round(average, 2) if average is not None else None,
+            })
+
+    return render(request, "students/student_scores.html", {
+        "student": student,
+        "school_years": school_years,
+        "semesters": semesters,
+        "score_groups": scores_by_transcript,
+        "selected_school_year_id": int(selected_school_year_id) if selected_school_year_id else None,
+        "selected_semester_id": int(selected_semester_id) if selected_semester_id else None,
+    })

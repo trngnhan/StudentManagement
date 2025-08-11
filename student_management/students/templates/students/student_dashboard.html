@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Trang học sinh{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-primary text-center">Chào mừng {{ student.name }}!</h2>
+
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white text-center fw-bold fs-4">
+            THÔNG TIN CÁ NHÂN
+        </div>
+        <div class="card-body">
+            <!-- <p><strong>Mã học sinh:</strong> {{ student.id }}</p> -->
+            <p><strong>Họ tên:</strong> {{ student.name }}</p>
+            <p><strong>Ngày sinh:</strong> {{ student.birthday|date:"d/m/Y" }}</p>
+            <p><strong>Giới tính:</strong> {{ student.get_gender_display }}</p>
+        </div>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{% url 'student_view_scores' %}" class="btn btn-success btn-lg">Xem điểm số</a>
+    </div>
+</div>
+{% endblock %}

@@ -5,12 +5,12 @@
 {% block content %}
 <div class="container mt-4">
   <h3 class="text-center text-primary fw-bold">
-    📘 Các học kỳ của {{ school_year.school_year_name }}
+    Các học kỳ của {{ school_year.school_year_name }}
   </h3>
 
   <!-- Form thêm học kỳ -->
   <div class="card mt-3">
-    <div class="card-header bg-info text-white">➕ Thêm học kỳ</div>
+    <div class="card-header bg-info text-white">Thêm học kỳ</div>
     <div class="card-body">
       <form method="post" action="{% url 'semester_create_view' %}" class="row g-2">
         {% csrf_token %}
@@ -33,13 +33,13 @@
     {% for sem in semesters %}
       <div class="card shadow-sm border-info mb-3" style="width: 20rem;" id="semester-card-{{ sem.id }}">
         <div class="card-body text-center">
-          <h5 class="card-title text-info fw-bold" id="sem-title-{{ sem.id }}">📖 {{ sem.get_semester_type_display }}</h5>
+          <h5 class="card-title text-info fw-bold" id="sem-title-{{ sem.id }}">{{ sem.get_semester_type_display }}</h5>
           <p class="card-text mb-0">Thuộc năm học: <strong>{{ sem.school_year.school_year_name }}</strong></p>
           <div class="d-flex justify-content-center gap-2 mt-3">
-            <a href="{% url 'semester_edit_form_view' sem.id %}" class="btn btn-sm btn-warning">✏️ Sửa</a>
+            <a href="{% url 'semester_edit_form_view' sem.id %}" class="btn btn-sm btn-warning">Sửa</a>
             <form method="post" action="{% url 'semester_delete_view' sem.id %}" style="display:inline;">
               {% csrf_token %}
-              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Xác nhận xoá học kỳ này?')">🗑️ Xoá</button>
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Xác nhận xoá học kỳ này?')">Xoá</button>
             </form>
           </div>
         </div>
@@ -50,7 +50,7 @@
   </div>
 
   <div class="text-center mt-4">
-    <a href="{% url 'schoolyear_manage_view' %}" class="btn btn-outline-secondary">⬅️ Quay lại danh sách năm học</a>
+    <a href="{% url 'schoolyear_manage_view' %}" class="btn btn-outline-secondary">Quay lại danh sách năm học</a>
   </div>
 </div>
 {% endblock %}
