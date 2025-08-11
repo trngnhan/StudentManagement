@@ -42,7 +42,7 @@ from collections import defaultdict
 from django.db.models import Avg, Count, Q, Max
 from django.db import transaction
 from functools import wraps
-
+import streamlit as st
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -425,6 +425,22 @@ def admin_dashboard(request):
 def camera_attendance(request):
     return render(request, "attendance/camera_attendance.html")
 
+
+def verify_image(image, stage):
+    try:
+        st.write(f"{stage} image shape: {image.shape}, dtype: {image.dtype}")
+        if len(image.shape) == 2 or image.shape[2] == 1:
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        elif image.shape[2] == 4:
+            image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
+        elif image.shape[2] != 3:
+            raise ValueError(f"Unsupported image shape at {stage}: {image.shape}")
+        if image.dtype != 'uint8':
+            image = image.astype('uint8')
+        return image
+    except Exception as e:
+        st.error(f"Error verifying image at {stage}: {e}")
+        return None
 
 @csrf_exempt
 def mark_attendance(request):
