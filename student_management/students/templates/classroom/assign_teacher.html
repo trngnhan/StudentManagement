@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+{% load static %}
+{% load form_tags %}
+{% block title %}Tạo Lớp Học {% endblock %}
+{% block content %}
+
+<style>
+    .assign-container {
+        max-width: 900px;
+        margin: 0 auto;
+        background: #fff;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        font-family: Arial, sans-serif;
+    }
+
+    h2 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+
+    form {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px 20px;
+        margin-bottom: 25px;
+    }
+
+    label {
+        font-weight: 600;
+        color: #34495e;
+        margin-bottom: 5px;
+        display: block;
+    }
+
+    select {
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background-color: #fafafa;
+        transition: all 0.2s ease;
+        width: 100%;
+    }
+
+    select:focus {
+        border-color: #3498db;
+        background-color: #fff;
+        outline: none;
+        box-shadow: 0 0 4px rgba(52, 152, 219, 0.3);
+    }
+
+    button {
+        grid-column: span 2;
+        background-color: #3498db;
+        color: #fff;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 6px;
+        font-size: 15px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+    button:hover {
+        background-color: #2980b9;
+    }
+
+    h3 {
+        margin: 25px 0 15px;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    th,
+    td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+        text-align: left;
+    }
+
+    th {
+        background-color: #3498db;
+        color: white;
+        font-weight: 600;
+    }
+
+    tr:hover {
+        background-color: #f9f9f9;
+    }
+
+    /* Thông báo */
+    .message {
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+
+    .message.error {
+        background-color: #ffeded;
+        color: #d63031;
+        border: 1px solid #fab1a0;
+    }
+
+    .message.success {
+        background-color: #e8f8f5;
+        color: #27ae60;
+        border: 1px solid #a3e4d7;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin-top: 20px;
+        font-family: Arial, sans-serif;
+    }
+
+    .pagination a,
+    .pagination span {
+        display: inline-block;
+        padding: 8px 14px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        background-color: #fff;
+        color: #007bff;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .pagination a:hover {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+
+    .pagination span {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+        background: white;
+        margin: 10% auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 400px;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .modal-close {
+        float: right;
+        cursor: pointer;
+        font-size: 20px;
+    }
+
+    .btn-edit {
+        padding: 5px 10px;
+        background: #ffc107;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .btn-edit:hover {
+        background: #e0a800;
+        color: white;
+    }
+
+    .btn-save {
+        background: #28a745;
+        color: white;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .btn-save:hover {
+        background: #218838;
+    }
+
+    .search-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 20px;
+        background: #f8f9fa;
+        padding: 12px 15px;
+        border-radius: 8px;
+        box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .search-form div {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        flex: 1;
+    }
+
+    .search-form input,
+    .search-form select {
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 14px;
+        min-width: 150px;
+        transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .search-form input:focus,
+    .search-form select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 4px rgba(0, 123, 255, 0.2);
+    }
+
+    .search-form button {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    .search-form button:hover {
+        background: #0056b3;
+    }
+
+    .search-form button::before {
+        font-size: 14px;
+    }
+</style>
+
+<div class="assign-container">
+    <h2>Phân công giáo viên</h2>
+    <h5>Thanh tìm kiếm:</h5>
+    <form method="get" class="search-form">
+        <div>
+            <input type="number" name="year" placeholder="Năm học" value="{{ request.GET.year }}">
+            <input type="text" name="teacher" placeholder="Tên giảng viên" value="{{ request.GET.teacher }}">
+            <input type="text" name="class_name" placeholder="Tên lớp" value="{{ request.GET.class_name }}">
+            <select name="semester">
+                <option value="">-- Chọn học kỳ --</option>
+                <option value="1">Học kỳ I</option>
+                <option value="2">Học kỳ II</option>
+            </select>
+        </div>
+        <button type="submit">🔍 Tìm kiếm</button>
+    </form>
+
+
+    <form method="post" id="assignForm">
+        {% csrf_token %}
+        <input type="hidden" name="transcript_id" id="transcript_id">
+        <div>
+            <label>Lớp học:</label>
+            <select name="classroom" required>
+                {% for c in classrooms %}
+                <option value="{{ c.id }}">{{ c.classroom_name }} - {{ c.grade }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Môn học:</label>
+            <select name="curriculum" required>
+                {% for cur in curriculums %}
+                <option value="{{ cur.id }}">{{ cur.subject.subject_name }} - {{ cur.grade }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Giáo Viên:</label>
+            <select name="teacher_info" required>
+                {% for t in teachers %}
+                <option value="{{ t.id }}">{{ t.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Học kỳ:</label>
+            <select name="semester" required>
+                {% for s in semesters %}
+                <option value="{{ s.id }}">{{ s.get_semester_type_display }} - {{ s.school_year.school_year_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit">Lưu</button>
+    </form>
+
+    <h3>Danh sách phân công</h3>
+    <table>
+        <tr>
+            <th>Lớp</th>
+            <th>Môn học</th>
+            <th>Giáo Viên</th>
+            <th>Học kỳ</th>
+            <th>Cập nhật</th>
+        </tr>
+        {% for tr in transcripts %}
+        <tr>
+            <td>{{ tr.classroom.classroom_name }}</td>
+            <td>{{ tr.curriculum.subject.subject_name }}</td>
+            <td>{{ tr.teacher_info.name }}</td>
+            <td>{{ tr.semester.get_semester_type_display }} - {{ tr.semester.school_year.school_year_name }}</td>
+            <td>
+                <button class="btn-edit" data-id="{{ tr.id }}" data-classroom="{{ tr.classroom.id }}"
+                    data-curriculum="{{ tr.curriculum.id }}" data-teacher="{{ tr.teacher_info.id }}"
+                    data-semester="{{ tr.semester.id }}">
+                    Chỉnh sửa
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    <div class="pagination">
+        {% if transcripts.has_previous %}
+        <a href="?page={{ transcripts.previous_page_number }}">&laquo; Trước</a>
+        {% endif %}
+
+        <span>Trang {{ transcripts.number }} / {{ transcripts.paginator.num_pages }}</span>
+
+        {% if transcripts.has_next %}
+        <a href="?page={{ transcripts.next_page_number }}">Sau &raquo;</a>
+        {% endif %}
+    </div>
+
+    {% for message in messages %}
+    <div class="message {% if message.tags == 'success' %}success{% else %}error{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".btn-edit").forEach(function (btn) {
+            btn.addEventListener("click", function (e) {
+                e.preventDefault();
+
+                // Gán dữ liệu vào form
+                document.getElementById("transcript_id").value = this.dataset.id;
+                document.querySelector("select[name='classroom']").value = this.dataset.classroom;
+                document.querySelector("select[name='curriculum']").value = this.dataset.curriculum;
+                document.querySelector("select[name='teacher_info']").value = this.dataset.teacher;
+                document.querySelector("select[name='semester']").value = this.dataset.semester;
+
+                // Cuộn lên form
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+        });
+    });
+</script>
+
+{% endblock %}

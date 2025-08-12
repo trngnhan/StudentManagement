@@ -57,12 +57,14 @@ urlpatterns = [
     path('curriculums/add/', curriculum_add_form_view, name='curriculum_add_form_view'),
     path('curriculums/add/submit/', curriculum_add_view, name='curriculum_add_view'),
 
-    path("classroom/class_management/", class_management, name="classroom_management"),
+    path("classroom/", class_management, name="classroom_management"),
     path("classroom/create/", classroom_create, name="classroom_create"),
     path("classroom/<int:pk>/add-student/", add_student_to_classroom, name="add_student_to_classroom"),
     path("classroom/transfer/", transfer_student, name="transfer_student"),
     path("classroom/add-students-bulk/", classroom_add_students_bulk, name="classroom_add_students_bulk"),
     path("classroom/<int:pk>/update/", classroom_update, name="classroom_update"),
     path("classroom/<int:pk>/delete/", classroom_delete, name="classroom_delete"),
-    path("classroom/classroom_transfer_students_bulk", classroom_transfer_students_bulk, name="classroom_transfer_students_bulk")
+    path("classroom/classroom_transfer_students_bulk", classroom_transfer_students_bulk, name="classroom_transfer_students_bulk"),
+    path("classroom/assign-teacher/", assign_teacher, name="assign_teacher"),
+
 ]

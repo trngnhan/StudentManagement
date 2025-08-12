@@ -194,8 +194,8 @@ from datetime import timedelta
 CELERY_BEAT_SCHEDULE = {
     "notify_absent_students": {
         "task": "students.tasks.notify_absent_students",
-        "schedule": crontab(hour=7, minute=35),
-        # "schedule": timedelta(seconds=60),
+        # "schedule": crontab(hour=7, minute=35),
+        "schedule": timedelta(seconds=60),
     },
 }
 

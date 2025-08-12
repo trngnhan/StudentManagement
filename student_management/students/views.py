@@ -959,7 +959,6 @@ def class_management(request):
         "studentsByClass": students_json_by_class,
         "students": students.filter(last_date__isnull=True),
     }
-    print(context)
     return render(request, "classroom/class_management.html", context)
 
 
@@ -1215,3 +1214,93 @@ def student_view_scores(request):
         "selected_school_year_id": int(selected_school_year_id) if selected_school_year_id else None,
         "selected_semester_id": int(selected_semester_id) if selected_semester_id else None,
     })
+
+
+def assign_teacher(request):
+    if request.method == "POST":
+        classroom_id = request.POST.get("classroom")
+        curriculum_id = request.POST.get("curriculum")
+        teacher_id = request.POST.get("teacher_info")
+        semester_id = request.POST.get("semester")
+        transcript_id = request.POST.get("transcript_id")
+
+        try:
+            classroom = Classroom.objects.get(id=classroom_id)
+            curriculum = Curriculum.objects.get(id=curriculum_id)
+            teacher = TeacherInfo.objects.get(id=teacher_id)
+            semester = Semester.objects.get(id=semester_id)
+
+            # Update
+            if transcript_id:
+                transcript = Transcript.objects.get(id=transcript_id)
+                transcript.classroom = classroom
+                transcript.curriculum = curriculum
+                transcript.teacher_info = teacher
+                transcript.semester = semester
+                transcript.save()
+                messages.success(request, "Cập nhật phân công thành công!")
+            else:
+                # Kiểm tra trùng lặp
+                exists = Transcript.objects.filter(
+                    classroom=classroom,
+                    curriculum=curriculum,
+                    semester=semester
+                ).exists()
+
+                if exists:
+                    messages.error(request, "Phân công này đã tồn tại.")
+                else:
+                    Transcript.objects.create(
+                        classroom=classroom,
+                        curriculum=curriculum,
+                        teacher_info=teacher,
+                        semester=semester
+                    )
+                    messages.success(request, "Phân công giảng viên thành công!")
+
+        except (Classroom.DoesNotExist, Curriculum.DoesNotExist, TeacherInfo.DoesNotExist, Semester.DoesNotExist):
+            messages.error(request, "Dữ liệu không hợp lệ.")
+
+        return redirect("assign_teacher")
+
+   # Lấy danh sách transcripts
+    transcripts = Transcript.objects.all().select_related("classroom", "curriculum__subject", "teacher_info", "semester__school_year")
+
+    year = request.GET.get('year')
+    teacher_name = request.GET.get('teacher')
+    semester = request.GET.get('semester')
+    class_name = request.GET.get('class_name')
+
+    if year:
+        transcripts = transcripts.filter(
+            semester__school_year__school_year_name__icontains=year
+        )
+
+    if teacher_name:
+        transcripts = transcripts.filter(
+            teacher_info__name__icontains=teacher_name
+        )
+
+    if semester:
+        transcripts = transcripts.filter(
+            semester__semester_type=semester
+        )
+
+    if class_name:
+        transcripts = transcripts.filter(
+            classroom__classroom_name__icontains=class_name)
+
+    paginator = Paginator(transcripts, 10)
+    page_number = request.GET.get("page")
+    transcripts = paginator.get_page(page_number)
+
+    context = {
+        "classrooms": Classroom.objects.all(),
+        "curriculums": Curriculum.objects.all(),
+        "teachers": TeacherInfo.objects.all(),
+        "semesters": Semester.objects.all(),
+        "transcripts": transcripts
+    }
+    return render(request, "classroom/assign_teacher.html", context)
+
+

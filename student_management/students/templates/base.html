@@ -48,6 +48,15 @@
                             </a>
                         </li>
                         {% endif %}
+                        {% if request.session.role == "staff" or request.session.role == "admin" %}
+                        {% url 'assign_teacher' as class_url %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == class_url %}active{% endif %}"
+                                href="{{ class_url }}">
+                                Quản lý chương trình dạy
+                            </a>
+                        </li>
+                        {% endif %}
 
                         {# ------ QUẢN LÝ ĐIỂM DANH ------ #}
                         {% if request.session.role == "staff" or request.session.role == "admin" %}
