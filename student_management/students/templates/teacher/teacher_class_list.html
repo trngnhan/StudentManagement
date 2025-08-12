@@ -2,16 +2,55 @@
 {% block title %}Lớp bạn phụ trách{% endblock %}
 
 {% block content %}
-<h4 class="text-primary">📚 Danh sách lớp bạn phụ trách</h4>
+<h4 class="text-primary">Danh sách lớp phụ trách</h4>
+
+<!-- Form lọc -->
+<form method="get" class="row g-3 mb-4">
+  <div class="col-md-4">
+    <label class="form-label">Năm học</label>
+    <select name="school_year" class="form-select">
+      <option value="">-- Tất cả --</option>
+      {% for sy in school_years %}
+        <option value="{{ sy.id }}" {% if selected_year == sy.id %}selected{% endif %}>
+          {{ sy.school_year_name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Học kỳ</label>
+    <select name="semester" class="form-select">
+      <option value="">-- Tất cả --</option>
+      {% for sm in semesters %}
+        <option value="{{ sm.semester_type }}" {% if selected_semester == sm.semester_type %}selected{% endif %}>
+          {{ sm.get_semester_type_display }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4 align-self-end">
+    <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+  </div>
+</form>
+
+<!-- Danh sách lớp -->
 <div class="row mt-4">
-  {% for c in classes %}
-    <div class="col-md-4">
-      <a href="{% url 'teacher_subject_scores_view' c.id %}" class="card text-decoration-none shadow-sm">
-        <div class="card-body text-center">
-          <h5 class="card-title fw-bold text-primary">{{ c.classroom_name }}</h5>
-        </div>
-      </a>
-    </div>
-  {% endfor %}
+  {% if classes %}
+    {% for c in classes %}
+      <div class="col-md-4">
+        <a href="{% url 'teacher_subject_scores_view' c.id %}" class="card text-decoration-none shadow-sm">
+          <div class="card-body text-center">
+            <h5 class="fw-bold text-primary">{{ c.name }}</h5>
+            <p class="mb-0 text-muted">
+              <span class="fw-semibold">Năm học:</span> {{ c.year }}<br>
+              <span class="fw-semibold">Học kỳ:</span> {{ c.semester }}
+            </p>
+          </div>
+        </a>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-muted">Không tìm thấy lớp nào phù hợp.</p>
+  {% endif %}
 </div>
 {% endblock %}

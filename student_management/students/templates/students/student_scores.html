@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Xem điểm theo học kỳ{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <h2 class="text-center text-primary">Xem điểm của {{ student.name }}</h2>
@@ -33,6 +34,29 @@
         </div>
     </form>
 
+    <!-- Hiển thị điểm TB học kỳ và đánh giá -->
+    {% if semester_avg %}
+        <div class="alert alert-light border text-center">
+            <p>
+                <strong>Điểm trung bình học kỳ:</strong>
+                <span>{{ semester_avg }}</span>
+            </p>
+            <p>
+                <strong>Xếp loại học lực:</strong>
+                {% if semester_avg >= 8 %}
+                    <span class="text-success fw-bold">Giỏi</span>
+                {% elif semester_avg >= 6.5 %}
+                    <span class="text-primary fw-bold">Khá</span>
+                {% elif semester_avg >= 5 %}
+                    <span class="text-warning fw-bold">Trung bình</span>
+                {% else %}
+                    <span class="text-danger fw-bold">Yếu</span>
+                {% endif %}
+            </p>
+        </div>
+    {% endif %}
+
+    <!-- Danh sách điểm từng môn -->
     {% if score_groups %}
         {% for group in score_groups %}
             <div class="card mt-4">
@@ -59,7 +83,7 @@
                         </tbody>
                     </table>
 
-                    <p><strong>Điểm trung bình:</strong>
+                    <p><strong>Điểm trung bình môn:</strong>
                         {% if group.average %} {{ group.average }} {% else %} Chưa có {% endif %}
                     </p>
                 </div>
