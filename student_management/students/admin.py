@@ -15,7 +15,7 @@ import face_recognition
 from .models import (
     User, AdminInfo, StaffInfo, TeacherInfo, ParentInfo,
     SchoolYear, Semester, Grade, Classroom, StudentInfo, ClassroomTransfer,
-    Subject, Curriculum, Transcript, Score, Attendance, Rule,
+    Subject, Curriculum, Transcript, Score, Attendance, Rule, ConductRecord
 )
 
 
@@ -333,6 +333,13 @@ class RuleAdmin(admin.ModelAdmin):
     search_fields = ("rule_name",)
     list_editable = ("min_value", "max_value")
 
+@admin.register(ConductRecord, site=admin_site)
+@admin.register(ConductRecord)
+class ConductRecordAdmin(admin.ModelAdmin):
+    list_display = ("student", "semester", "conduct")
+    list_filter = ("semester__school_year", "semester__semester_type", "conduct")
+    search_fields = ("student__name",)
+    list_editable = ("conduct",)
 
 @admin.register(Group, site=admin_site)
 class CustomGroupAdmin(GroupAdmin):
@@ -375,3 +382,4 @@ Attendance._meta.verbose_name = "Điểm danh"
 Attendance._meta.verbose_name_plural = "Điểm danh"
 Rule._meta.verbose_name = "Quy định"
 Rule._meta.verbose_name_plural = "Quy định"
+ConductRecord._meta.verbose_name_plural = "Hạnh kiểm"

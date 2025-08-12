@@ -4,34 +4,34 @@
 {% block content %}
 <div class="container mt-4">
   <h3 class="text-primary fw-bold text-center">
-    📝 Bảng điểm - {{ transcript.curriculum.subject.subject_name }} - {{ transcript.classroom.classroom_name }}
+    Bảng điểm - {{ transcript.curriculum.subject.subject_name }} - {{ transcript.classroom.classroom_name }}
   </h3>
 
-  {% if grouped_scores %}
-    <!-- Nút Xuất Excel (TÁCH RIÊNG FORM) -->
-    <div class="text-end mb-3">
-      <form method="POST">
-        {% csrf_token %}
-        <input type="hidden" name="export_excel" value="1" />
-        <button type="submit" class="btn btn-outline-primary">
-          Xuất Excel
-        </button>
-      </form>
-    </div>
-
-    <!-- FORM Lưu và Thêm điểm -->
+  <!-- Nút Xuất Excel -->
+  <div class="text-end mb-3">
     <form method="POST">
       {% csrf_token %}
+      <input type="hidden" name="export_excel" value="1" />
+      <button type="submit" class="btn btn-outline-primary">
+        Xuất Excel
+      </button>
+    </form>
+  </div>
 
-      <!-- Danh sách học sinh -->
-      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-        {% for item in grouped_scores %}
-          <div class="col">
-            <div class="card h-100 border-primary shadow-sm">
-              <div class="card-header bg-primary text-white fw-bold">
-                {{ item.student.name }}
-              </div>
-              <div class="card-body">
+  <!-- FORM Lưu và Thêm điểm -->
+  <form method="POST">
+    {% csrf_token %}
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+      {% for item in grouped_scores %}
+        <div class="col">
+          <div class="card h-100 border-primary shadow-sm">
+            <div class="card-header bg-primary text-white fw-bold">
+              {{ item.student.name }}
+            </div>
+            <div class="card-body">
+
+              {% if item.scores %}
                 <table class="table table-sm">
                   <thead>
                     <tr>
@@ -44,52 +44,57 @@
                       <tr>
                         <td>{{ score.get_score_type_display }}</td>
                         <td>
-                          <input type="number" step="0.1" name="score_{{ score.id }}"
-                                 value="{{ score.score_number }}" class="form-control form-control-sm" />
+                          <input type="number" step="0.1" min="0" max="10"
+                                 name="score_{{ score.id }}"
+                                 value="{{ score.score_number }}"
+                                 class="form-control form-control-sm" />
                         </td>
                       </tr>
                     {% endfor %}
                   </tbody>
                 </table>
+              {% else %}
+                <p class="text-muted fst-italic">Chưa có điểm</p>
+              {% endif %}
 
-                <!-- Thêm điểm -->
-                <hr />
-                <div class="fw-bold mb-2">Thêm điểm mới</div>
-                <div class="row g-2">
-                  <input type="hidden" name="new_score_student_id_{{ item.student.id }}" value="{{ item.student.id }}" />
-                  <div class="col-6">
-                    <select name="new_score_type_{{ item.student.id }}" class="form-select form-select-sm">
-                      <option value="">-- Loại điểm --</option>
-                      <option value="1">15 phút</option>
-                      <option value="2">1 tiết</option>
-                      <option value="3">Thi cuối kỳ</option>
-                    </select>
-                  </div>
-                  <div class="col-4">
-                    <input type="number" step="0.1" min="0" max="10"
-                           name="new_score_value_{{ item.student.id }}" placeholder="Điểm"
-                           class="form-control form-control-sm">
-                  </div>
-                  <div class="col-2">
-                    <button name="add_score_for_{{ item.student.id }}" value="1"
-                            class="btn btn-sm btn-outline-success w-100">
-                      ➕
-                    </button>
-                  </div>
+              <!-- Thêm điểm mới -->
+              <hr />
+              <div class="fw-bold mb-2">Thêm điểm mới</div>
+              <div class="row g-2">
+                <input type="hidden" name="new_score_student_id_{{ item.student.id }}" value="{{ item.student.id }}" />
+                <div class="col-6">
+                  <select name="new_score_type_{{ item.student.id }}" class="form-select form-select-sm">
+                    <option value="">-- Loại điểm --</option>
+                    <option value="1">15 phút</option>
+                    <option value="2">1 tiết</option>
+                    <option value="3">Thi cuối kỳ</option>
+                  </select>
+                </div>
+                <div class="col-4">
+                  <input type="number" step="0.1" min="0" max="10"
+                         name="new_score_value_{{ item.student.id }}"
+                         placeholder="Điểm"
+                         class="form-control form-control-sm">
+                </div>
+                <div class="col-2">
+                  <button name="add_score_for_{{ item.student.id }}" value="1"
+                          class="btn btn-sm btn-outline-success w-100"
+                          title="Thêm điểm">
+                    ➕
+                  </button>
                 </div>
               </div>
+
             </div>
           </div>
-        {% endfor %}
-      </div>
+        </div>
+      {% endfor %}
+    </div>
 
-      <!-- Nút lưu -->
-      <div class="text-center mt-4">
-        <button type="submit" class="btn btn-success">Lưu thay đổi</button>
-      </div>
-    </form>
-  {% else %}
-    <p class="text-muted text-center">Không có học sinh nào có điểm.</p>
-  {% endif %}
+    <!-- Nút lưu -->
+    <div class="text-center mt-4">
+      <button type="submit" class="btn btn-success">Lưu thay đổi</button>
+    </div>
+  </form>
 </div>
 {% endblock %}

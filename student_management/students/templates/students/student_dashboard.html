@@ -1,23 +1,96 @@
 {% extends "base.html" %}
 {% block title %}Trang học sinh{% endblock %}
+
 {% block content %}
 <div class="container mt-5">
     <h2 class="text-primary text-center">Chào mừng {{ student.name }}!</h2>
 
-    <div class="card mt-4">
-        <div class="card-header bg-info text-white text-center fw-bold fs-4">
-            THÔNG TIN CÁ NHÂN
+    <!-- Form chọn Năm học + Học kỳ -->
+    <form method="get" class="row g-3 mt-4 mb-4">
+        <div class="col-md-4">
+            <label class="form-label fw-bold">Năm học</label>
+            <select name="school_year" class="form-select" onchange="this.form.submit()">
+                {% for sy in school_years %}
+                    <option value="{{ sy.id }}" {% if sy.id == selected_school_year_id %}selected{% endif %}>
+                        {{ sy.school_year_name }}
+                    </option>
+                {% endfor %}
+            </select>
         </div>
-        <div class="card-body">
-            <!-- <p><strong>Mã học sinh:</strong> {{ student.id }}</p> -->
-            <p><strong>Họ tên:</strong> {{ student.name }}</p>
-            <p><strong>Ngày sinh:</strong> {{ student.birthday|date:"d/m/Y" }}</p>
-            <p><strong>Giới tính:</strong> {{ student.get_gender_display }}</p>
+        <div class="col-md-4">
+            <label class="form-label fw-bold">Học kỳ</label>
+            <select name="semester" class="form-select" onchange="this.form.submit()">
+                <option value="all" {% if selected_semester_type == "all" or not selected_semester_type %}selected{% endif %}>Cả năm</option>
+                <option value="1" {% if selected_semester_type == "1" %}selected{% endif %}>Học kỳ 1</option>
+                <option value="2" {% if selected_semester_type == "2" %}selected{% endif %}>Học kỳ 2</option>
+            </select>
         </div>
-    </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Xem</button>
+        </div>
+    </form>
 
-    <div class="text-center mt-4">
-        <a href="{% url 'student_view_scores' %}" class="btn btn-success btn-lg">Xem điểm số</a>
+    <div class="row g-3">
+        <!-- Điểm trung bình -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-success h-100">
+                <div class="card-header bg-success text-white fw-bold">Điểm trung bình</div>
+                <div class="card-body">
+                    {% if selected_semester_type == "all" or selected_semester_type == "1" %}
+                        <p>Học kỳ 1: {{ summary.HK1.avg|default:"Chưa có" }}</p>
+                    {% endif %}
+                    {% if selected_semester_type == "all" or selected_semester_type == "2" %}
+                        <p>Học kỳ 2: {{ summary.HK2.avg|default:"Chưa có" }}</p>
+                    {% endif %}
+                    {% if selected_semester_type == "all" %}
+                        <hr>
+                        <p><strong>Cả năm:</strong> {{ overall_avg|default:"Chưa có" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Học lực -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-primary h-100">
+                <div class="card-header bg-primary text-white fw-bold">Học lực</div>
+                <div class="card-body">
+                    {% if selected_semester_type == "all" or selected_semester_type == "1" %}
+                        <p>Học kỳ 1: {{ summary.HK1.grade|default:"Chưa tính" }}</p>
+                    {% endif %}
+                    {% if selected_semester_type == "all" or selected_semester_type == "2" %}
+                        <p>Học kỳ 2: {{ summary.HK2.grade|default:"Chưa tính" }}</p>
+                    {% endif %}
+                    {% if selected_semester_type == "all" %}
+                        <hr>
+                        <p><strong>Cả năm:</strong> {{ overall_grade|default:"Chưa tính" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Hạnh kiểm -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-warning h-100">
+                <div class="card-header bg-warning text-white fw-bold">Hạnh kiểm</div>
+                <div class="card-body">
+                    {% if selected_semester_type == "all" or selected_semester_type == "1" %}
+                        <p>Học kỳ 1: {{ conduct.HK1|default:"Chưa xét" }}</p>
+                    {% endif %}
+                    {% if selected_semester_type == "all" or selected_semester_type == "2" %}
+                        <p>Học kỳ 2: {{ conduct.HK2|default:"Chưa xét" }}</p>
+                    {% endif %}
+                    {% if selected_semester_type == "all" %}
+                        <hr>
+                        <p><strong>Cả năm:</strong> {{ overall_conduct|default:"Chưa xét" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="{% url 'student_view_scores' %}" class="btn btn-success btn-lg">Xem điểm số</a>
+        </div>
     </div>
 </div>
 {% endblock %}

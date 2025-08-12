@@ -215,4 +215,27 @@ class Rule(models.Model):
 
     def __str__(self):
         return self.rule_name
+
+# -------- HẠNH KIỂM --------
+class ConductRecord(models.Model):
+    class ConductChoices(models.TextChoices):
+        TOT = "T", "Tốt"
+        KHA = "K", "Khá"
+        TB = "TB", "Trung bình"
+        YEU = "Y", "Yếu"
+        CHUA_XET = "CX", "Chưa xét"
+
+    student = models.ForeignKey(StudentInfo, on_delete=models.CASCADE, related_name="conduct_records")
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE, related_name="conduct_records")
+    conduct = models.CharField(
+        max_length=2,
+        choices=ConductChoices.choices,
+        default=ConductChoices.CHUA_XET
+    )
+
+    class Meta:
+        unique_together = ('student', 'semester')
+
+    def __str__(self):
+        return f"{self.student.name} - {self.semester} - {self.get_conduct_display()}"
     
