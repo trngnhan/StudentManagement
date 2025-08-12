@@ -14,7 +14,7 @@
         {% csrf_token %}
         <input type="hidden" name="export_excel" value="1" />
         <button type="submit" class="btn btn-outline-primary">
-          📥 Xuất Excel
+          Xuất Excel
         </button>
       </form>
     </div>
@@ -29,14 +29,14 @@
           <div class="col">
             <div class="card h-100 border-primary shadow-sm">
               <div class="card-header bg-primary text-white fw-bold">
-                👨‍🎓 {{ item.student.name }}
+                {{ item.student.name }}
               </div>
               <div class="card-body">
                 <table class="table table-sm">
                   <thead>
                     <tr>
-                      <th>📌 Loại điểm</th>
-                      <th>📈 Điểm</th>
+                      <th>Loại điểm</th>
+                      <th>Điểm</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -54,7 +54,7 @@
 
                 <!-- Thêm điểm -->
                 <hr />
-                <div class="fw-bold mb-2">➕ Thêm điểm mới</div>
+                <div class="fw-bold mb-2">Thêm điểm mới</div>
                 <div class="row g-2">
                   <input type="hidden" name="new_score_student_id_{{ item.student.id }}" value="{{ item.student.id }}" />
                   <div class="col-6">
@@ -85,7 +85,7 @@
 
       <!-- Nút lưu -->
       <div class="text-center mt-4">
-        <button type="submit" class="btn btn-success">💾 Lưu thay đổi</button>
+        <button type="submit" class="btn btn-success">Lưu thay đổi</button>
       </div>
     </form>
   {% else %}
