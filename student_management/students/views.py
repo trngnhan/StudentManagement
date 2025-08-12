@@ -45,6 +45,7 @@ from functools import wraps
 import streamlit as st
 from django.db.models import Avg
 from django.utils.text import slugify
+from django.http import HttpResponseForbidden
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -571,8 +572,8 @@ def student_list(request):
 @login_required
 @role_required("admin", "staff")
 def student_create(request):
-    if request.user.role == "staff" or request.user.role == "admin":
-        if request.method == "POST":
+    if request.session.get("role") in ["staff", "admin"]:
+        if request.method == "POST":    
             form = StudentForm(request.POST)
             if form.is_valid():
                 form.save()
@@ -582,11 +583,12 @@ def student_create(request):
             form = StudentForm()
         return render(request, "students/student_form.html", {"form": form})
 
+    return HttpResponseForbidden("Bạn không có quyền truy cập.")
 # Sửa học sinh
 @login_required
 @role_required("admin", "staff")
 def student_update(request, pk):
-    if request.user.role == "staff" or request.user.role == "admin":
+    if request.session.get("role") in ["staff", "admin"]:
         student = get_object_or_404(StudentInfo, pk=pk)
         if request.method == "POST":
             form = StudentForm(request.POST, instance=student)
@@ -602,7 +604,7 @@ def student_update(request, pk):
 @login_required
 @role_required("admin", "staff")
 def student_delete(request, pk):
-    if request.user.role == "staff" or request.user.role == "admin":
+    if request.session.get("role") in ["staff", "admin"]:
         student = get_object_or_404(StudentInfo, pk=pk)
         if request.method == "POST":
             student.delete()
@@ -933,7 +935,7 @@ def transfer_student(request):
 @login_required
 @role_required("staff", "admin")
 def class_management(request):
-    classes = Classroom.objects.select_related("grade").order_by("grade__grade_type", "classroom_name")
+    classes =classes = Classroom.objects.select_related("grade", "grade__school_year").order_by("grade__grade_type", "classroom_name")
 
     students = (
         StudentInfo.objects
@@ -1077,23 +1079,22 @@ def classroom_transfer_students_bulk(request):
 @login_required
 @role_required("staff", "admin")
 def attendance_management(request):
-    # 1. Ngày cần kiểm tra
-    date_param = request.GET.get("date")         
-    if date_param:                                
+    date_param = request.GET.get("date")
+    if date_param:
         try:
             selected_date = datetime.strptime(date_param, "%Y-%m-%d").date()
         except ValueError:
-            selected_date = timezone.localdate() 
+            selected_date = timezone.localdate()
     else:
         selected_date = timezone.localdate()
-    # 2. Danh sách lớp
+
+    # Lấy lớp kèm thông tin năm học
     classes = (
         Classroom.objects
-        .select_related("grade")
+        .select_related("grade", "grade__school_year")
         .order_by("grade__grade_type", "classroom_name")
     )
 
-    # 3. Subquery kiểm tra đã điểm danh?
     attended_qs = Attendance.objects.filter(student=OuterRef("pk"), date=selected_date)
     students_not_checked = (
         StudentInfo.objects
@@ -1101,7 +1102,6 @@ def attendance_management(request):
         .filter(has_checked=False)
     )
 
-    # 4. Gom vào dict theo lớp hiện tại
     students_by_class = {}
     for stu in students_not_checked:
         cur_cls = stu.get_current_classroom()
@@ -1122,7 +1122,9 @@ def attendance_management(request):
         "classes": classes,
         "students_by_class": students_json_by_class
     }
+    print(context)
     return render(request, "attendance/attendance_management.html", context)
+
 
 
 @login_required

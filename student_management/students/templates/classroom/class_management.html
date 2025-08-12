@@ -38,6 +38,7 @@
                         <th>STT</th>
                         <th>Tên lớp</th>
                         <th>Khối</th>
+                        <th>Năm học</th>
                         <th>Sĩ số</th>
                         <th>Hành động</th>
                     </tr>
@@ -48,6 +49,7 @@
                         <td>{{ forloop.counter }}</td>
                         <td>{{ c.classroom_name }}</td>
                         <td>{{ c.grade.get_grade_type_display }}</td>
+                         <td>{{ c.grade.school_year.school_year_name }}</td>
                         <td><span class="text-black">{{ c.student_number }}</span></td>
                         <td>
                             <a href="{% url 'classroom_update' c.id %}" class="btn btn-sm btn-outline-secondary">

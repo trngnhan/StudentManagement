@@ -7,7 +7,7 @@ from .views import *
 router = DefaultRouter()
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('', admin_dashboard, name='admin_dashboard'),
     path('admin/', admin_site.urls),
     path('rules_list/', rules_list_get_view, name='rules_list_get_view'),
     path('rules_list/update/', rules_list_post_view, name='rules_list_post_view'),
@@ -38,7 +38,6 @@ urlpatterns = [
     path("teacher/class/<int:classroom_id>/scores/", teacher_subject_scores_view, name="teacher_subject_scores_view"),
     path("teacher/scores/<int:transcript_id>/", teacher_score_detail_view, name="teacher_score_detail_view"),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('admin_dashboard/', admin_dashboard, name='admin_dashboard'),
     # url QLDD
     path("attendance/camera/", camera_attendance, name="camera_attendance"),
     path("attendance/mark/",  mark_attendance,  name="mark_attendance"),
