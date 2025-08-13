@@ -8,6 +8,7 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.admin import GroupAdmin
 import pickle
 import time
+import streamlit as st
 
 import cv2
 import numpy as np
@@ -26,6 +27,25 @@ class SchoolAdminSite(admin.AdminSite):
 
 
 admin_site = SchoolAdminSite(name="admin")
+
+
+
+def verify_image(image, stage):
+    try:
+        st.write(f"{stage} image shape: {image.shape}, dtype: {image.dtype}")
+        if len(image.shape) == 2 or image.shape[2] == 1:
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        elif image.shape[2] == 4:
+            image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
+        elif image.shape[2] != 3:
+            raise ValueError(f"Unsupported image shape at {stage}: {image.shape}")
+        if image.dtype != 'uint8':
+            image = image.astype('uint8')
+        return image
+    except Exception as e:
+        st.error(f"Error verifying image at {stage}: {e}")
+        return None
+    
 
 
 def enroll(tolerance: float = 0.6, frames_per_pose: int = 5):
@@ -55,15 +75,20 @@ def enroll(tolerance: float = 0.6, frames_per_pose: int = 5):
                 cv2.putText(frame, f"HAY {label}", (30, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                 cv2.imshow("Enroll", frame)
                 key = cv2.waitKey(1) & 0xFF
-                if key == 27:  # ESC
+                if key == 27:
                     cap.release()
                     cv2.destroyAllWindows()
                     return None
 
                 if time.time() - start > 0.5:
                     start = time.time()
-                    # chuyển từ BGR to RGB (dlib cần)
-                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    # # chuyển từ BGR to RGB (dlib cần)
+                    # rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    # Dùng verify_image để đảm bảo ảnh RGB chuẩn
+                    rgb = verify_image(frame, stage=f"enroll_{label}")
+                    if rgb is None:
+                        continue
+
                     locs = face_recognition.face_locations(rgb)
                     if len(locs) != 1:
                         continue

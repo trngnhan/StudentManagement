@@ -438,14 +438,26 @@ def mark_attendance(request):
         data_url = json.loads(request.body)["image"]
         if not data_url:
             return JsonResponse({"status": "error", "detail": "No image"}, status=400)
+        # # tách base64
+        # header, b64 = data_url.split(",", 1)
+        # img_bytes = base64.b64decode(b64)
+        # img_array = np.frombuffer(img_bytes, np.uint8)
+        # frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
+        # #  chuyển về dạng -> RGB
+        # rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
         # tách base64
         header, b64 = data_url.split(",", 1)
         img_bytes = base64.b64decode(b64)
         img_array = np.frombuffer(img_bytes, np.uint8)
-        frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        frame = cv2.imdecode(img_array, cv2.IMREAD_UNCHANGED)  # dùng UNCHANGED để giữ nguyên kênh
 
-        #  chuyển về dạng -> RGB
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # dùng verify_image để đảm bảo ảnh ở dạng RGB
+        rgb = verify_image(frame, stage="mark_attendance")
+        if rgb is None:
+            return JsonResponse({"status": "error", "detail": "Invalid image format"}, status=400)
+
 
         # detect & encode
         locs = face_recognition.face_locations(rgb)
