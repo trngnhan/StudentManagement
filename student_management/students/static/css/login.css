@@ -5,7 +5,7 @@ html, body {
 }
 
 body {
-  background: url('/static/images/login-bg.jpg') no-repeat center center fixed;
+  background: url('../images/bg.jpg?v=2') no-repeat center center fixed;
   background-size: cover;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -37,6 +37,23 @@ body {
 
 .login-form:hover {
   box-shadow: 0 18px 40px 0 rgba(78,84,200,0.22), 0 4px 8px rgba(0,0,0,0.10);
+}
+
+.password-wrapper {
+    position: relative;
+}
+
+.password-wrapper input {
+    padding-right: 40px;
+}
+
+.password-wrapper i {
+    position: absolute;
+    top: 67.5%;
+    right: 12px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #6c757d;
 }
 
 .login-title {

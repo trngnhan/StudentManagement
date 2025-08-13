@@ -5,7 +5,6 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/login.css' %}">
-<link rel="stylesheet" href="{% static 'css/base_effects.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -25,12 +24,29 @@
               <label for="username" class="form-label">Tên đăng nhập</label>
               <input type="text" class="form-control" id="username" name="username" required autofocus placeholder="Nhập tên đăng nhập">
           </div>
-          <div class="mb-3">
+
+          <div class="mb-3 password-wrapper">
               <label for="password" class="form-label">Mật khẩu</label>
               <input type="password" class="form-control" id="password" name="password" required placeholder="Nhập mật khẩu">
+              <i class="bi bi-eye-slash" id="togglePassword"></i>
           </div>
+
           <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
       </form>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const togglePassword = document.querySelector("#togglePassword");
+const password = document.querySelector("#password");
+
+togglePassword.addEventListener("click", function () {
+    const type = password.getAttribute("type") === "password" ? "text" : "password";
+    password.setAttribute("type", type);
+    this.classList.toggle("bi-eye");
+    this.classList.toggle("bi-eye-slash");
+});
+</script>
 {% endblock %}
