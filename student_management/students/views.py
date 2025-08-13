@@ -1231,7 +1231,7 @@ def student_dashboard_view(request):
     if selected_school_year:
         semesters = Semester.objects.filter(school_year=selected_school_year)
 
-        # Tính điểm TB và học lực cho từng học kỳ
+        # --- Xử lý từng học kỳ ---
         for sem in semesters:
             avg_scores = []
             transcripts = Transcript.objects.filter(semester=sem, scores__student_info=student).distinct()
@@ -1253,15 +1253,16 @@ def student_dashboard_view(request):
                 else:
                     summary[f"HK{sem.semester_type}"]["grade"] = "Yếu"
 
-            # Lấy hạnh kiểm
+            # --- Lấy hạnh kiểm ---
             cr = ConductRecord.objects.filter(student=student, semester=sem).first()
             if cr:
-                conduct[f"HK{sem.semester_type}"] = cr.conduct
+                conduct[f"HK{sem.semester_type}"] = cr.get_conduct_display()
 
-        # Tính cả năm nếu đủ 2 học kỳ có điểm
+        # --- Tính hạnh kiểm và điểm trung bình cả năm ---
         if summary["HK1"]["avg"] is not None and summary["HK2"]["avg"] is not None:
             overall_avg = round((summary["HK1"]["avg"] + summary["HK2"]["avg"]) / 2, 2)
             summary["overall"]["avg"] = overall_avg
+            # Xếp loại học lực cả năm
             if overall_avg >= 8:
                 summary["overall"]["grade"] = "Giỏi"
             elif overall_avg >= 6.5:
@@ -1271,12 +1272,18 @@ def student_dashboard_view(request):
             else:
                 summary["overall"]["grade"] = "Yếu"
 
-            # Xét hạnh kiểm cả năm (ưu tiên học kỳ 2, nếu trống thì lấy HK1)
-            conduct["overall"] = conduct["HK2"] or conduct["HK1"]
+            # Xét hạnh kiểm cả năm dựa trên 2 kỳ (lấy hạnh kiểm thấp hơn)
+            if conduct["HK1"] and conduct["HK2"]:
+                order = ["Yếu", "Trung bình", "Khá", "Tốt"]
+                idx1 = order.index(conduct["HK1"])
+                idx2 = order.index(conduct["HK2"])
+                conduct["overall"] = order[min(idx1, idx2)]
+            else:
+                conduct["overall"] = conduct["HK2"] or conduct["HK1"]
 
-    overall_avg = summary["overall"]["avg"]
-    overall_grade = summary["overall"]["grade"]
-    overall_conduct = conduct["overall"]
+        else:
+            # Nếu chỉ có 1 kỳ có điểm
+            conduct["overall"] = conduct["HK2"] or conduct["HK1"]
 
     return render(request, "students/student_dashboard.html", {
         "student": student,
@@ -1285,9 +1292,9 @@ def student_dashboard_view(request):
         "selected_semester_type": selected_semester_type,
         "summary": summary,
         "conduct": conduct,
-        "overall_avg": overall_avg,
-        "overall_grade": overall_grade,
-        "overall_conduct": overall_conduct,
+        "overall_avg": summary["overall"]["avg"],
+        "overall_grade": summary["overall"]["grade"],
+        "overall_conduct": conduct["overall"],
     })
 
 def get_grade_label(avg):
